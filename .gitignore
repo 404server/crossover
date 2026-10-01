@@ -1,0 +1,20 @@
+# environments and builds
+.venv/
+bench/target/
+__pycache__/
+*.pyc
+.DS_Store
+# raw campaign results are published on Zenodo (see README); summaries stay in the repo
+results/raw/
+results/calib/
+results/*-aborted-*.log
+# LaTeX build output
+paper/*.pdf
+paper/*.aux
+paper/*.log
+paper/*.bbl
+paper/*.blg
+paper/*.out
+# internal working notes (citation audit, venue research, cover-letter drafts)
+notes/*
+!notes/control-lowload.md
