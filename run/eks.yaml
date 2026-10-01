@@ -1,0 +1,34 @@
+# Cloud environment: EKS in ap-southeast-2 on Graviton (one vCPU = one physical core).
+# Sized to a 16-vCPU account quota: an 8-core and a 4-core node for the system under test
+# (the monolith's 4-core pod needs the larger one) and a 4-core node for the load generator.
+#   eksctl create cluster -f run/eks.yaml --kubeconfig ~/.kube/eks-crossover
+#   eksctl delete cluster -f run/eks.yaml --wait
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+metadata:
+  name: crossover
+  region: ap-southeast-2
+  version: "1.35"
+availabilityZones: [ap-southeast-2a, ap-southeast-2b]
+vpc:
+  nat:
+    gateway: Disable          # nodes sit in public subnets; no NAT gateway to pay for
+managedNodeGroups:
+  - name: sut-8
+    instanceType: c7g.2xlarge
+    desiredCapacity: 1
+    availabilityZones: [ap-southeast-2a]
+    labels: {crossover/role: sut}
+    volumeSize: 30
+  - name: sut-4
+    instanceType: c7g.xlarge
+    desiredCapacity: 1
+    availabilityZones: [ap-southeast-2a]
+    labels: {crossover/role: sut}
+    volumeSize: 30
+  - name: loadgen
+    instanceType: c7g.xlarge
+    desiredCapacity: 1
+    availabilityZones: [ap-southeast-2a]
+    labels: {crossover/role: loadgen}
+    volumeSize: 30

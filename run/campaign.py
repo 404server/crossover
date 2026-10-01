@@ -56,15 +56,23 @@ def targets(cfg, workload, n=2000, seed=1):
 
 
 def attack(tfile, duration, out=None, rate=None, workers=None, bodies=False):
-    """rate -> open loop (constant arrivals, no coordinated omission); workers -> closed loop."""
+    """rate -> open loop (constant arrivals, no coordinated omission); workers -> closed loop.
+    One exec per step: the report goes to stderr, the encoded results (if kept) to stdout, which
+    matters when the cluster is a long round trip away."""
     flags = f"-targets={tfile} -duration={duration}s -timeout=10s"
     flags += f" -rate={rate}" if rate else f" -rate=0 -workers={workers} -max-workers={workers}"
     flags += "" if bodies else " -max-body=0"
-    sh(LG + [f"vegeta attack {flags} > /work/r.bin"])
+    script = f"vegeta attack {flags} > /work/r.bin && vegeta report -type=json < /work/r.bin >&2"
+    if out:
+        script += " && vegeta encode --to json < /work/r.bin | gzip -1"
+    r = subprocess.run(LG + [script], capture_output=True)
+    if r.returncode != 0:
+        raise RuntimeError(f"attack failed: {r.stderr.decode()[-2000:]}")
     if out:
         out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_bytes(sh(LG + ["vegeta encode --to json < /work/r.bin | gzip -1"]))
-    return json.loads(sh(LG + ["vegeta report -type=json < /work/r.bin"]))
+        out.write_bytes(r.stdout)
+    report = next(l for l in reversed(r.stderr.decode().splitlines()) if l.startswith("{"))
+    return json.loads(report)
 
 
 def push(data, path):
@@ -79,20 +87,26 @@ def push(data, path):
 def top(d, step):
     try:
         rows = [l.split() for l in kube("top", "pods", "-n", gen.NS, "--containers", "--no-headers").splitlines()]
+        # the load generator's own CPU, to show it never became the bottleneck
+        load = [l.split() for l in kube("top", "pods", "-n", gen.LOAD_NS, "--no-headers", check=False).splitlines()]
         with open(d / "top.jsonl", "a") as f:
-            f.write(json.dumps({"step": step, "t": time.time(), "rows": rows}) + "\n")
+            f.write(json.dumps({"step": step, "t": time.time(), "rows": rows, "loadgen": load}) + "\n")
     except RuntimeError:
         pass  # metrics-server not ready yet; utilisation is auxiliary
 
 
-def restarts():
-    pods = json.loads(kube("get", "pods", "-n", gen.NS, "-o", "json"))["items"]
+def sut_pods():
+    return json.loads(kube("get", "pods", "-n", gen.NS, "-o", "json"))["items"]
+
+
+def restarts(pods=None):
+    pods = sut_pods() if pods is None else pods
     return {p["metadata"]["name"]: sum(c.get("restartCount", 0) for c in p["status"].get("containerStatuses", [])) for p in pods}
 
 
-def cgroup_cpu():
+def cgroup_cpu(pods=None):
     """cpu.stat of every SUT container (cgroup v2): usage and CFS throttling counters."""
-    pods = json.loads(kube("get", "pods", "-n", gen.NS, "-o", "json"))["items"]
+    pods = sut_pods() if pods is None else pods
     procs = {}
     for p in pods:
         # Istio injects its sidecar as a native sidecar (an init container that keeps running)
@@ -110,11 +124,13 @@ def cgroup_cpu():
 def guarded(d, step, run):
     """Runs one step; if any pod restarted meanwhile (e.g. OOM), records an incident so the
     analysis drops the step, and waits for the deployment to recover before continuing."""
-    before, cg0 = restarts(), cgroup_cpu()
+    p0 = sut_pods()
+    before, cg0 = restarts(p0), cgroup_cpu(p0)
     wall0, up0 = time.time(), time.clock_gettime(time.CLOCK_UPTIME_RAW)  # uptime stops while the host sleeps
     result = run()
     slept = (time.time() - wall0) - (time.clock_gettime(time.CLOCK_UPTIME_RAW) - up0)
-    after, cg1 = restarts(), cgroup_cpu()
+    p1 = sut_pods()
+    after, cg1 = restarts(p1), cgroup_cpu(p1)
     if slept > 5:
         log(f"  !! host slept {slept:.0f}s during {step}; step dropped")
         with open(d / "incidents.jsonl", "a") as f:
