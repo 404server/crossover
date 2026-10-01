@@ -1,0 +1,257 @@
+\section{Testbed}
+\label{sec:testbed}
+
+The testbed is designed so that the deployment topology is the only thing that differs between
+configurations. This section describes the application, the four configurations, the resource
+budget and the per-layer latency accounting; Section~\ref{sec:method} describes how it was exercised.
+
+\subsection{One artifact, four topologies}
+\label{sec:artifact}
+
+The application is a small e-commerce back end written in Java~25 with Spring Boot~4.1.1 (Tomcat, JDBC,
+HikariCP) and PostgreSQL~17. Its business logic is split into eight modules, each owning its tables:
+\emph{Auth} (sessions), \emph{Profiles} (users and loyalty tier), \emph{Search} (a category index),
+\emph{Products} (catalogue), \emph{Stock} (inventory levels), \emph{Reservations}, \emph{Carts} and
+\emph{Orders}. Each module is a Java interface with one implementation. All eight modules are compiled into a
+single artifact, and a process reads one setting, \texttt{SERVICE\_MODULES}, that lists the modules it hosts.
+A call to a hosted module is a plain method call. A call to any other module goes through a generic stub that
+serialises the arguments to JSON, sends \texttt{POST /rpc/\{Module\}/\{method\}} over HTTP/1.1 with
+keep-alive connections, and deserialises the result. Because every configuration runs the same binary with
+the same business code, a difference between configurations cannot come from a difference in implementation.
+This is a stronger form of the shared-library approach described in our earlier protocol, where equivalence
+had to be enforced by tests.
+
+\begin{table}[t]
+\caption{Configurations. All share one artifact; only the module-to-process mapping differs.
+CPU is the per-pod share of the equal budget (\xo{appcpu} cores for the application tier and
+\xo{dbcpu} cores for the database tier).}
+\label{tab:configs}
+\centering\small
+\begin{tabular}{@{}llrrr@{}}
+\toprule
+Config & Services (modules) & Pods & CPU/app pod & CPU/db pod \\
+\midrule
+A & \texttt{mono} (all eight) & 1+1 & 4.0 & 2.0 \\
+B & \texttt{user} (Auth, Profiles), \texttt{catalog} (Search, Products), & 4+4 & 1.0 & 0.5 \\
+  & \texttt{inventory} (Stock, Reservations), \texttt{order} (Carts, Orders) & & & \\
+C & one service per module & 8+8 & 0.5 & 0.25 \\
+D & as C, every pod with an Istio sidecar & 8+8 & 0.5 (+ sidecar) & 0.25 (+ sidecar) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:configs} lists the configurations. Config~A is the monolith. Config~B groups the modules into
+four services along domain lines, the grouping most teams would choose first. Config~C gives every module its own
+service. Config~D is C with an Istio~1.31 service mesh injected into every pod, including the database pods;
+it isolates the mesh as the single added variable. The earlier protocol's Config~D also added asynchronous
+messaging, which would have changed two variables at once; we dropped it for that reason. Every service has
+its own PostgreSQL instance holding only the tables of its modules, so Config~A has one database and
+Configs~C and~D have eight. In~D, Istio runs with its default PERMISSIVE peer authentication and automatic
+mutual TLS, so every sidecar-to-sidecar connection, including those to databases, is encrypted; only the
+load generator's connection to the edge service is plaintext.
+
+\subsection{Operations and call graphs}
+\label{sec:ops}
+
+Two edge operations exercise the system. \emph{Browse} is a read-only listing: it verifies the session,
+reads twenty product identifiers for a category page from the Search index, fetches those products and
+their stock levels, and returns about 5.5\,kB of JSON. \emph{Checkout} is a deep write path: it verifies the
+session, reads the user's loyalty tier and cart, prices the cart, reserves stock (Reservations calls Stock,
+which decrements all items in one atomic \texttt{UPDATE}) and records the order. Every cart contains one of
+ten popular products, so concurrent checkouts contend for a small set of hot rows, the kind of shared-state
+coherency cost the USL's $\beta$ term is meant to capture. The data set has 10{,}000 users, 10{,}000
+products in 50 categories and three cart items per user.
+
+\begin{table}[t]
+\caption{Remote calls per request. Each call is one JSON/HTTP round trip between processes; the counts were
+confirmed at run time from the \texttt{calls} field every response carries.}
+\label{tab:hops}
+\centering\small
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Operation & DB statements & A & B & C & D \\
+\midrule
+Browse   & 4 & 0 & 2 & 3 & 3 \\
+Checkout & 7 & 0 & 4 & 6 (depth 2) & 6 (depth 2) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\input{sections/fig-callgraph}
+
+An operation is served only by the process that hosts its owning module (Search for browse, Orders for
+checkout); Figure~\ref{fig:callgraph} shows the resulting call graph. Table~\ref{tab:hops} gives the resulting number of remote calls. Browse needs two remote calls
+in~B and three in~C; checkout needs four in~B and six in~C, one of them nested (Reservations to Stock).
+The two operations therefore span zero to six hops with the same business logic.
+
+\subsection{Equal resource budget}
+\label{sec:budget}
+
+A comparison of architectures is only meaningful if they run on the same resources. Every configuration
+receives the same total CPU: \xo{appcpu} cores for the application tier and \xo{dbcpu} cores for the
+database tier, split equally across its pods as Kubernetes requests equal to limits (Guaranteed QoS).
+The split is deliberately naive. It is what a team gets by dividing a node pool evenly, and it exposes an
+effect that proportional allocation would hide: in Config~C, the four modules that browse does not touch
+keep half of the application budget idle. Section~\ref{sec:discussion} returns to this point.
+
+Memory is not split equally. A Spring Boot process needs roughly 300\,MiB of resident memory at idle, so an
+equal split of 4\,GiB over eight services (512\,MiB each) left the edge service open to kernel OOM kills under
+overload in our calibration runs. Application pods therefore get the larger of their equal share and
+1\,GiB, and memory is reported as a measured cost rather than treated as an equalised input. Istio sidecars
+request 0.1 and may use up to one core; this is outside the application budget, and sidecar CPU is reported
+separately as part of the mesh's cost.
+
+The JVM settings are identical everywhere: G1 is selected explicitly (under small CPU limits the JVM would
+otherwise pick the serial collector for the fine-grained services and G1 for the monolith), the heap is capped
+at 50\% of the container limit, Tomcat has its default 200 worker threads, and HikariCP its default ten
+connections. Two settings were changed from their defaults after calibration: Tomcat accepts at most 1{,}000
+connections per process, so that an overloaded service queues work in the kernel backlog instead of buffering
+it in its own memory, and keep-alive connections are never closed by the server, because the JDK HTTP client
+does not retry a POST that races with a server-side close.
+
+\subsection{Per-layer latency accounting}
+\label{sec:timing}
+
+Every response carries a W3C \texttt{Server-Timing} header~\cite{W3CServerTiming} with six durations,
+aggregated over the process's own work and everything it called. For a process $s$ handling one request, a
+servlet filter records the arrival time and the handler measures five intervals with
+\texttt{System.nanoTime}: time before the handler runs (framework dispatch, $\mathit{oth}_s$), JSON encoding
+and decoding on both sides of every hop it takes part in ($\mathit{ser}_s$), JDBC calls including connection-pool
+wait ($\mathit{db}_s$), the round trip $\mathit{rtt}_c$ of every outbound call $c$, and the handler's own duration.
+Application time $\mathit{app}_s$ is the handler duration minus its database time and its outbound calls. By
+construction
+\begin{equation}
+\mathit{tot}_s = \mathit{oth}_s + \mathit{ser}_s + \mathit{app}_s + \mathit{db}_s + \sum_{c} \mathit{rtt}_c .
+\label{eq:tot}
+\end{equation}
+The callee of call $c$ returns its own total $\mathit{tot}_c$, and the caller attributes the difference to the
+network,
+\begin{equation}
+\mathit{net}_c = \mathit{rtt}_c - \mathit{tot}_c ,
+\label{eq:net}
+\end{equation}
+which covers everything between the two processes: the HTTP client and server stacks, kernel networking,
+kube-proxy and, in Config~D, both sidecars. Both terms of~\eqref{eq:net} are differences of timestamps taken
+on one host, so no clock synchronisation is needed. This replaces the span-difference method of our earlier
+protocol, which subtracted timestamps taken on different nodes and depended on NTP or PTP accuracy. Each
+process adds its callees' layers to its own, so the edge process reports
+$\mathit{tot} = \sum\mathit{app} + \sum\mathit{db} + \sum\mathit{ser} + \sum\mathit{net} + \sum\mathit{oth}$
+over the whole call tree. The load generator's observed latency minus the edge's $\mathit{tot}$ is the
+\emph{edge} layer: the client-to-edge network plus any time a request waits in the edge's accept queue.
+Every millisecond of end-to-end latency is thus assigned to exactly one of six layers. Because the layers
+add up exactly, the earlier protocol's reconciliation check (layers versus end-to-end within 5\%) is no longer
+informative; what can be checked is that each layer behaves plausibly, for instance that $\mathit{net}$ is zero
+in Config~A, which it was in every run. The probes cost about twenty \texttt{nanoTime} calls and one header of
+roughly 120 bytes per hop, well under a microsecond of CPU, whereas distributed-tracing agents have been measured
+to add up to 175\% latency~\cite{Nou2025}. The \texttt{calls} field counts remote calls over the call tree and
+was used to confirm Table~\ref{tab:hops}.
+
+\subsection{Functional equivalence}
+
+Before the measurements of every deployment, the load generator replays the first 100 requests of each
+workload's request sequence at 20 requests per second and keeps the response bodies. The analysis hashes
+every body and compares it with the body the monolith returned for the same request, matched by sequence
+number. Checkout responses
+are deterministic (user, item count, total, status), so both operations can be compared byte for byte.
+\xo{equiv/match} of \xo{equiv/total} bodies matched.
+
+\section{Experimental method}
+\label{sec:method}
+
+\subsection{Environment}
+
+The campaign reported here ran on a kind~0.31 Kubernetes~\xo{k8s} cluster on one Apple-silicon workstation
+(12 cores, 24\,GiB; Docker Desktop VM with 12 vCPUs and 11.7\,GiB): one control-plane node, one node reserved
+for the load generator and two nodes for the system under test, selected with node labels. All nodes share
+the host's CPUs, so this environment isolates the software stack (Kubernetes networking, CFS quotas,
+sidecars) but not hardware. The same manifests and scripts run unchanged on a bare-metal cluster and on
+GKE, the two further environments of the protocol; Section~\ref{sec:threats} discusses what the single-host
+environment can and cannot show.
+
+\subsection{Workloads and load generation}
+
+Load comes from Vegeta~12.13~\cite{Vegeta} running in a pod on the load-generator node. For each workload the
+generator cycles through a fixed sequence of 2{,}000 requests with pseudo-random users, categories and pages,
+generated from one seed, so every configuration receives the same request sequence and only the host name
+differs. Two load modes answer two different questions~\cite{Schroeder2006}:
+
+\begin{itemize}
+\item \textbf{Open loop, for latency.} Requests arrive at a constant rate regardless of responses, so a slow
+system cannot slow the generator down and latency is measured from each request's scheduled send time; this
+avoids coordinated omission~\cite{Tene2015}. Each rate level runs for \xo{openstep}\,s. A level is
+\emph{saturated} if more than 5\% of requests fail (including 10\,s client timeouts) or if throughput falls
+below 90\% of the offered rate; the sweep for a configuration stops after two consecutive saturated levels.
+\item \textbf{Closed loop, for capacity.} $N$ workers each send the next request as soon as the previous one
+completes, with no think time, for $N \in \{1, 2, 4, \dots, 256\}$ and \xo{closedstep}\,s per level. This is
+the setting in which the USL~\eqref{eq:usl} is defined, so USL fits use closed-loop data only.
+\end{itemize}
+
+Each workload in each deployment starts with a \xo{warmup}\,s closed-loop warm-up with 16 workers, which is
+discarded. A closed-loop warm-up runs at each configuration's own capacity, so every JVM serves tens of thousands
+of requests before measurement (JIT compilation, connection pools, caches) and none is overloaded. Calibration
+runs with a short open-loop warm-up showed p99 falling as the offered rate rose, a sign of JIT compilation still
+in progress during the first steps.
+
+\subsection{Procedure}
+
+A \emph{cell} is one configuration in one repetition. Every cell gets a fresh deployment: the namespace is
+deleted and recreated, databases are re-seeded, and all JVMs start cold. Repetitions are therefore independent
+samples of the whole deployment, not only of the measurement. Within each repetition the order of the four
+configurations is shuffled with a fixed seed, so slow drifts of the host do not line up with one configuration.
+After every step the runner records per-container CPU and memory (\texttt{kubectl top}), each container's
+cgroup \texttt{cpu.stat} counters before and after the step (CPU time, CFS periods and throttled periods), and
+the pods' restart counts. A step during which any pod restarted, or during which the host was suspended (detected by
+comparing wall-clock time with an uptime clock that stops during sleep), is recorded as an incident and excluded from
+the analysis. After a saturated step, and before each closed-loop sweep, the runner waits until a 3\,s probe at 20
+requests per second completes without errors and with a p99 below 500\,ms, so that the backlog of an overloaded step
+cannot leak into the next measurement; \xo{cells} cells ran \xo{reps} repetitions in \xo{hours}\,h.
+
+\subsection{Statistical analysis}
+\label{sec:stats}
+
+The unit of replication is the cell. Requests within one run are serially dependent, so treating each request as
+an independent observation would overstate precision. Per-step statistics (percentiles, mean layers,
+throughput) are computed within a cell; across repetitions we report the median and, with five or more
+repetitions, a 95\% bootstrap confidence interval of that median (with fewer, the range).
+
+Tail-latency comparisons between a microservice configuration and the monolith use a two-level bootstrap in the
+spirit of Kalibera and Jones~\cite{Kalibera2013}: resample repetitions with replacement, then requests within each
+resampled repetition, recompute the pooled percentile for both configurations, and take the ratio. The
+confidence interval of the p99 ratio is the percentile interval of the bootstrap distribution. For the H1 family
+(three microservice configurations times two workloads) the interval level is Bonferroni-adjusted to
+$1 - 0.05/6$. With few repetitions this procedure is more informative than a rank test on per-repetition
+percentiles, whose smallest attainable two-sided $p$-value with three repetitions per group is $0.1$.
+
+The USL is fitted by nonlinear least squares (trust-region reflective, $\lambda, \alpha, \beta \ge 0$) to every
+closed-loop measurement of a configuration, one point per repetition and concurrency level. Confidence intervals
+for $\alpha$, $\beta$, $N^\ast$ and the peak throughput $X_{\max}$ come from 1{,}000 bootstrap refits in which, at
+every concurrency level, the measurement of a randomly drawn repetition is used. When $\beta$ is estimated as zero
+the curve has no retrograde region and $N^\ast$ is undefined; $X_{\max}$ is then the asymptote $\lambda/\alpha$.
+
+We define two crossovers and report them separately, because they need not coincide. The \emph{throughput
+crossover} of configuration $X$ is the smallest concurrency at which its fitted USL curve exceeds the monolith's.
+The \emph{latency crossover} is the smallest offered rate at which $X$'s median p99 is lower than the monolith's,
+counting a saturated level as infinitely slow.
+
+\subsection{Hypotheses and falsification conditions}
+\label{sec:hypotheses}
+
+The three hypotheses of the protocol are kept, with falsification conditions tied to the procedures above.
+
+\textbf{H1 (low-load overhead).} At the lowest offered rate of each workload, the monolith has a lower p99
+than every microservice configuration. H1 is falsified if the Bonferroni-adjusted interval of any ratio
+$\mathrm{p99}_X/\mathrm{p99}_A$ lies entirely below one; it is supported if all six intervals lie above one.
+
+\textbf{H2 (scaling crossover).} Under the equal budget, some microservice configuration overtakes the
+monolith's throughput within the tested concurrency range, and its coherency coefficient is lower. H2 is
+falsified if the monolith's throughput matches or exceeds every microservice configuration at every measured
+concurrency level, or if no microservice configuration has $\beta < \beta_A$.
+
+\textbf{H3 (mesh compounding).} Istio's overhead grows with call-graph depth and exceeds a quarter of end-to-end
+latency on the six-hop path. With C and D differing only in the mesh, the overhead at a given offered rate is
+$D - C$: per-hop inter-service transit, database round-trip time, and end-to-end latency. The difference isolates
+the mesh only while neither configuration is limited by its CPU quota, so it is computed at the rates at which
+neither saturated and the edge application container of each was throttled in less than 1\% of its CFS periods. H3 is falsified if the
+mesh accounts for less than 25\% of D's end-to-end latency on checkout (six hops), or if the per-hop cost on
+checkout is more than 20\% lower than on browse (three hops), both taken at the workload's lowest offered
+rate, which would indicate sub-linear growth.

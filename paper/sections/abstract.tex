@@ -1,0 +1,16 @@
+Whether and when decomposing an application into microservices pays off in performance is usually argued from
+individual migration reports, and published comparisons disagree. We report a controlled comparison in which four
+deployments of one application differ only in topology: a monolith, four services, eight services, and eight
+services with an Istio sidecar mesh. All run the same binary under an equal CPU budget on Kubernetes. Latency is
+measured with open-loop load, capacity with closed-loop load fitted by the Universal Scalability Law, and every
+request carries a W3C Server-Timing breakdown that assigns its latency to application, database, serialisation,
+network, framework and edge layers without clock synchronisation; cgroup counters record each container's CPU use
+and throttling. Across \xo{cells} fresh deployments, decomposition raised low-load p99 latency to
+\xo{ratio/browse/B/50/est}--\xo{ratio/checkout/D/25/est} times the monolith's, mostly as inter-service transit of
+about 0.4\,ms per hop rather than serialisation. Capacity fell to \xo{xmaxratio/browse/C}--\xo{xmaxratio/checkout/B}
+of the monolith's, and no throughput crossover appeared at any load: the decomposed configurations were limited by
+the CPU quota of their edge service, whose CFS throttling also made tail latency erratic well below its nominal
+limit. The mesh added \xo{mesh/browse/200/perhop}--\xo{mesh/checkout/25/perhop}\,ms per hop, explained
+\xo{H3/share_deep}\% of latency on a six-hop path, and used more CPU than the application. Under an equal budget,
+decomposition's performance case therefore depends on resources or elasticity the monolith does not get. The
+testbed, raw data and analysis pipeline are available.

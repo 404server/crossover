@@ -1,0 +1,21 @@
+\subsection{Summary of the hypothesis tests}
+
+\begin{table}[t]
+\caption{Hypotheses, falsification conditions and outcomes in the local environment.}
+\label{tab:verdicts}
+\centering\small
+\begin{tabular}{@{}lp{0.52\linewidth}l@{}}
+\toprule
+& Falsified if & Outcome \\
+\midrule
+H1 & any microservice configuration has a significantly lower p99 than A at the lowest rate & \xo{verdict/H1} \\
+H2 & A matches or exceeds every microservice configuration at every concurrency level, or no $\beta < \beta_A$ & \xo{verdict/H2} \\
+H3 & mesh $<25\%$ of end-to-end latency at six hops, or per-hop cost shrinking with depth & \xo{verdict/H3} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:verdicts} summarises the three tests. Decomposition costs latency at low load (H1) and the mesh's
+cost compounds with depth (H3), as predicted. The central hypothesis, that horizontal decomposition eventually
+overtakes the monolith (H2), is falsified for an equal CPU budget: the monolith's capacity was four to sixteen times
+that of the decomposed configurations, and no crossover appeared at any load.

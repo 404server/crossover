@@ -1,0 +1,54 @@
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+    font=\footnotesize,
+    mod/.style={draw, rounded corners=2pt, minimum width=19mm, minimum height=6.5mm, fill=black!4, align=center},
+    edge/.style={draw, rounded corners=2pt, minimum width=19mm, minimum height=6.5mm, fill=black!12, align=center, thick},
+    grp/.style={draw, dashed, rounded corners=4pt, inner sep=2.2mm, black!55},
+    br/.style={-{Stealth[length=1.6mm]}, thick, xoBrowse},
+    co/.style={-{Stealth[length=1.6mm]}, thick, dashed, xoCheckout},
+    lbl/.style={font=\scriptsize\itshape, black!65}
+]
+\node[mod]  (auth)   at (0, 0)     {Auth};
+\node[mod]  (prof)   at (0, -1.5)  {Profiles};
+\node[edge] (search) at (3.1, 0)   {Search};
+\node[mod]  (prod)   at (3.1, -1.5){Products};
+\node[mod]  (stock)  at (6.2, 0)   {Stock};
+\node[mod]  (resv)   at (6.2, -1.5){Reservations};
+\node[edge] (orders) at (9.3, 0)   {Orders};
+\node[mod]  (carts)  at (9.3, -1.5){Carts};
+
+\node[grp, fit=(auth)(prof)]    (g1) {};
+\node[grp, fit=(search)(prod)]  (g2) {};
+\node[grp, fit=(stock)(resv)]   (g3) {};
+\node[grp, fit=(orders)(carts)] (g4) {};
+\node[lbl, below=0.5mm of g1] {\texttt{user}};
+\node[lbl, below=0.5mm of g2] {\texttt{catalog}};
+\node[lbl, below=0.5mm of g3] {\texttt{inventory}};
+\node[lbl, below=0.5mm of g4] {\texttt{order}};
+
+% browse (solid): Search -> Auth, Products, Stock
+\draw[br] (search.west) -- (auth.east);
+\draw[br] (search.south) -- (prod.north);
+\draw[br] (search.east) -- (stock.west);
+% checkout (dashed): Orders -> Auth, Profiles, Carts, Products, Reservations; Reservations -> Stock
+\draw[co] (orders.north) .. controls (8.2, 1.35) and (1.2, 1.35) .. (auth.north);
+\draw[co] (orders.south west) .. controls (7.6, -3.35) and (1.4, -3.35) .. (prof.south east);
+\draw[co] (orders.south) -- (carts.north);
+\draw[co] (orders.south west) .. controls (7.6, -0.75) and (4.6, -0.75) .. (prod.north east);
+\draw[co] (orders.south west) -- (resv.north east);
+\draw[co] (resv.north) -- (stock.south);
+
+\draw[-{Stealth[length=1.6mm]}, thick] (3.1, 1.15) node[above, font=\scriptsize] {client: browse} -- (search.north);
+\draw[-{Stealth[length=1.6mm]}, thick] (10.7, 0.9) node[above, font=\scriptsize] {client: checkout} -- (orders.north east);
+
+\draw[br] (0.2, -3.95) -- ++(0.7, 0) node[right, black, font=\scriptsize] {browse call};
+\draw[co] (3.2, -3.95) -- ++(0.7, 0) node[right, black, font=\scriptsize] {checkout call};
+\node[draw, dashed, rounded corners=3pt, black!55, minimum width=6mm, minimum height=3mm] at (6.55, -3.95) {};
+\node[right, font=\scriptsize] at (6.9, -3.95) {service in Config~B};
+\end{tikzpicture}
+\caption{Module call graph. Shaded modules own the edge operations. In Config~A every arrow is an in-process
+call; in Config~B only arrows that leave a dashed box cross the network (browse: 2, checkout: 4); in
+Configs~C and~D every arrow does (browse: 3, checkout: 6, the Reservations$\to$Stock call nested).}
+\label{fig:callgraph}
+\end{figure}

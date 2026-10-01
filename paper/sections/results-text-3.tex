@@ -1,0 +1,32 @@
+The USL describes the monolith well ($R^2_{\mathrm{adj}}$ of \xo{usl/browse/A/r2adj} and \xo{usl/checkout/A/r2adj})
+and B and D only moderately (\xo{usl/browse/D/r2adj}--\xo{usl/checkout/D/r2adj}): their throughput climbs to the
+quota within a few clients and then stays flat, a shape between the model's two regimes. For C the curve is flat
+from the start, and $R^2$ carries no information.
+
+\subsection{Where the time goes (RQ3)}
+\label{sec:res-layers}
+
+Figure~\ref{fig:layers} breaks the mean latency at the lowest rate into the six layers. In the monolith most
+of it is database time (\xo{layer/browse/A/50/db} of \xo{mean/browse/A/50}\,ms for browse,
+\xo{layer/checkout/A/25/db} of \xo{mean/checkout/A/25}\,ms for checkout); application code, serialisation and
+framework dispatch together take a few tenths of a millisecond. Decomposition leaves database time roughly where
+it was (browse: \xo{layer/browse/B/50/db}\,ms in~B and \xo{layer/browse/C/50/db}\,ms in~C) and adds inter-service
+transit on top: \xo{layer/browse/B/50/net} and \xo{layer/browse/C/50/net}\,ms for browse in B and~C,
+\xo{layer/checkout/B/25/net} and \xo{layer/checkout/C/25/net}\,ms for checkout. Per hop this is
+\xo{perhop/browse/C/net}--\xo{perhop/browse/B/net}\,ms for browse and \xo{perhop/checkout/C/net}--%
+\xo{perhop/checkout/B/net}\,ms for checkout. Serialisation, often blamed for the cost of microservices, adds only
+\xo{perhop/browse/D/ser}--\xo{perhop/checkout/B/ser}\,ms per hop for these payloads (at most about 5.5\,kB of JSON).
+In D the transit layer nearly doubles again and database time rises, because every query now also passes
+through two sidecars (Section~\ref{sec:res-mesh}).
+
+The decomposed configurations also cost more to run. Table~\ref{tab:cost} reports CPU time per request at the
+highest rate all four sustained. For browse at \xo{ref/browse/high} requests per second the monolith spent
+\xo{cpums/browse/A/600/total}\,ms of CPU per request, B \xo{cpums/browse/B/600/total}, C
+\xo{cpums/browse/C/600/total} and D \xo{cpums/browse/D/600/total}\,ms; for checkout at \xo{ref/checkout/high} the
+figures are \xo{cpums/checkout/A/400/total}, \xo{cpums/checkout/B/400/total}, \xo{cpums/checkout/C/400/total} and
+\xo{cpums/checkout/D/400/total}\,ms. Each remote call added \xo{perhop/browse/B/cpu}--\xo{perhop/browse/C/cpu}\,ms of
+CPU in B and~C and \xo{perhop/browse/D/cpu}--\xo{perhop/checkout/D/cpu}\,ms in~D. The resident memory of all pods
+grew from \xo{mem/browse/A/600}\,GiB for the monolith to \xo{mem/browse/B/600}, \xo{mem/browse/C/600} and
+\xo{mem/browse/D/600}\,GiB, mostly the fixed footprint of one JVM per service. The database tier's CPU per request
+rose more slowly, from \xo{cpums/browse/A/600/db} to \xo{cpums/browse/D/600/db}\,ms for browse; most of the extra
+cost is in the application and mesh tiers.

@@ -1,0 +1,53 @@
+\section{Threats to validity}
+\label{sec:threats}
+
+\paragraph{Construct validity.} Latency is attributed to layers by timestamps taken inside the Java processes.
+Work that happens before the servlet filter runs (TCP accept, HTTP parsing in Tomcat's poller, waiting for a
+worker thread) is not visible to the filter: on an inner hop it lands in the caller's \emph{net} layer, and on
+the edge hop in the \emph{edge} layer. Under saturation both layers therefore contain queueing as well as
+transport, and we interpret them that way. Application time is a residual of the handler's duration, so it also
+absorbs JVM effects such as garbage-collection pauses that fall inside a handler. Throughput in the closed-loop
+sweeps counts only successful responses. The USL is a phenomenological model; a good fit does not identify
+the mechanism behind $\alpha$ and $\beta$, which is why Section~\ref{sec:results} pairs every fit with the
+measured CPU utilisation and throttling of the containers involved.
+
+\paragraph{Internal validity.} The configurations run the same binary, receive the same request sequence and are
+checked for identical responses, so implementation differences are excluded by construction. Every cell is a
+fresh deployment and the configuration order is shuffled per repetition, which guards against drift of the
+host. Three settings of the stack were changed from their defaults after calibration (a 1\,GiB memory floor per
+application pod, a cap of 1{,}000 connections per Tomcat process, and server-side keep-alive without a request
+limit); each is applied to all configurations and is documented with its reason in
+Section~\ref{sec:budget}. The equal CPU split is a deliberate choice, not the only defensible one: an operator
+who sizes each service to its demand would give the edge service of~C more than half a core. The results on
+fragmentation (Section~\ref{sec:results}) are therefore results about equal static allocation, and the
+autoscaling experiments of the protocol, which the runner supports but this campaign did not use, are the
+test of demand-driven allocation.
+
+\paragraph{The measurement environment.} All nodes of the kind cluster, including the load generator's, share
+one host's CPUs. The load generator was not CPU-limited, and the system under test could not take more than its
+CPU limits, but the two still share caches, memory bandwidth and the hypervisor's scheduler. Inter-node traffic
+crosses a Linux bridge inside one virtual machine rather than a physical network, so the \emph{net} layer here is
+a lower bound on what the same topology costs across real hosts. We also observed a low-load penalty that is a
+property of the host rather than of any configuration: in the monolith, browse p99 was \xo{p99/browse/A/50}\,ms at 50 requests per second but
+\xo{p99/browse/A/800}\,ms at 800. A separate control run ruled out JIT warm-up as the cause: the penalty persisted
+after a closed-loop warm-up of about 580{,}000 requests (p99 4.0\,ms at 50 requests per second against 0.85\,ms at
+800) and reappeared on returning to 50 requests per second after the high-rate step (4.8\,ms). We attribute it to CPU idle-state exits and thread wake-ups when requests arrive 20\,ms apart.
+It affects every configuration, but configurations with more hops wake more threads per request, so it may
+slightly inflate their low-load ratios in Table~\ref{tab:h1}. On bare metal it can be controlled by pinning the
+CPU frequency governor and limiting idle states, which is part of the protocol for the remaining environments.
+
+\paragraph{External validity.} The application is small and synthetic, written in one language and one
+framework. Its per-request business logic is cheap, so the fixed costs of distribution (serialisation, HTTP,
+network) weigh more than they would in a service that spends tens of milliseconds computing. Communication is
+JSON over HTTP/1.1; binary protocols such as gRPC over HTTP/2 reduce serialisation and connection costs and
+could change the magnitudes, although not the direction, of the per-hop results. All databases are PostgreSQL
+instances co-located in the same cluster. The mesh is Istio~1.31 with sidecars; sidecar-less data planes such as
+Istio Ambient are reported to cost far less~\cite{BremlerBarr2025} and were not measured. The single-host
+environment says nothing about cloud-network effects; the bare-metal and GKE environments of the protocol,
+which the same scripts target, address this.
+
+\paragraph{Conclusion validity.} With \xo{reps} repetitions per configuration, intervals are wide for effects
+that are small relative to the variation between deployments. We report intervals rather than binary
+significance wherever possible, correct the H1 family for multiple comparisons, and treat the repetition, not
+the request, as the unit of analysis. The raw results of every cell are published so that other analyses can be
+run on them.

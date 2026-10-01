@@ -1,0 +1,26 @@
+\subsection{The cost of the service mesh (RQ4, H3)}
+\label{sec:res-mesh}
+
+Table~\ref{tab:mesh} lists the mesh's cost at every rate where the comparison is clean. Per hop, the two
+sidecars added \xo{mesh/browse/200/perhop}--\xo{mesh/checkout/25/perhop}\,ms of transit, of the same order as
+the 0.18--0.25\,ms (P90--P99) that Istio reports for a sidecar pair in version 1.22~\cite{Istio122Perf}, and the database
+round trips of a request took \xo{mesh/browse/200/db}--\xo{mesh/checkout/200/db}\,ms longer. The mesh explained
+\xo{mesh/browse/50/share}\% of D's mean end-to-end latency on browse at the lowest rate and
+\xo{mesh/checkout/25/share}\% on checkout; the share rose with load, to \xo{mesh/browse/400/share}\% and
+\xo{mesh/checkout/200/share}\%, because C's latency fell with load and D's fell less.
+
+H3 requires the mesh to account for at least a quarter of end-to-end latency on the six-hop path and its per-hop
+cost not to shrink as the path gets deeper. On checkout the median share over the clean rates was
+\xo{H3/share_deep}\%. At each workload's lowest rate the per-hop transit cost was \xo{H3/per_hop_shallow_ms}\,ms on
+the three-hop browse path and \xo{H3/per_hop_deep_ms}\,ms on the six-hop checkout path: it did not shrink with
+depth, so the total grows at least linearly with the number of hops. \textbf{H3 is supported.} Our original
+statement of H3 also predicted that the mesh would become the single largest contributor above four hops. On
+checkout at the lowest rate the mesh's \xo{mesh/checkout/25/e2e}\,ms is indeed larger than any single layer of
+configuration~C (whose largest, database time, is \xo{layer/checkout/C/25/db}\,ms).
+
+The sidecars' CPU is the larger cost. At \xo{ref/browse/high} browse requests per second they consumed
+\xo{cpums/browse/D/600/mesh}\,ms of CPU per request, more than the whole application tier
+(\xo{cpums/browse/D/600/app}\,ms); for checkout at \xo{ref/checkout/high} requests per second,
+\xo{cpums/checkout/D/400/mesh} against \xo{cpums/checkout/D/400/app}\,ms. Because the sidecars' CPU lies outside the
+equal application budget, D's capacity is not lower than C's; under a budget that included them, it would very
+likely be lower.
