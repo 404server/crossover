@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crossover Dashboard</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --ring: rgba(11,11,11,0.10); --wash: rgba(11,11,11,0.04);
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300; --s7: #4a3aa7;
+  --good: #0ca30c; --warning: #fab219; --critical: #d03b3b;
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10); --wash: rgba(255,255,255,0.05);
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10); --wash: rgba(255,255,255,0.05);
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 14px/1.45 var(--font-sans); }
+h1, h2 { text-wrap: balance; }
+td, th, .meta, svg text { font-family: var(--font-mono); }
+main { max-width: 1200px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { font-size: 22px; margin: 0 0 4px; font-weight: 650; }
+h2 { font-size: 15px; margin: 0; font-weight: 600; }
+p { margin: 0; }
+.sub { color: var(--ink-2); }
+.muted { color: var(--muted); }
+.meta { color: var(--ink-2); font-size: 13px; margin-top: 6px; overflow-wrap: anywhere; }
+.filters { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: end; margin: 20px 0; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+           background: var(--page); padding: 10px 0; border-bottom: 1px solid var(--grid); }
+.filters label { display: grid; gap: 4px; font-size: 12px; color: var(--ink-2); }
+select, button { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--axis); border-radius: 8px; padding: 6px 10px; }
+button { cursor: pointer; }
+button:hover, select:hover { background: var(--wash); }
+.seg { display: inline-flex; border: 1px solid var(--axis); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; background: var(--surface); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+.grid { display: grid; gap: 16px; grid-template-columns: repeat(12, minmax(0, 1fr)); }
+.card { background: var(--surface); border: 1px solid var(--ring); border-radius: 12px; padding: 16px; grid-column: span 12; min-width: 0; }
+.half { grid-column: span 6; }
+.third { grid-column: span 4; }
+.quarter { grid-column: span 3; }
+@media (max-width: 900px) { .half, .third, .quarter { grid-column: span 12; } }
+.card-head { display: flex; justify-content: space-between; gap: 12px; align-items: start; margin-bottom: 10px; }
+.card-head p { color: var(--ink-2); font-size: 13px; margin-top: 2px; }
+.ghost { font-size: 12px; padding: 4px 8px; white-space: nowrap; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--ink-2); margin: 4px 0 8px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.key-line { width: 14px; height: 2px; border-radius: 1px; display: inline-block; }
+.key-box { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.key-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+svg text { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+svg .axis-title { fill: var(--ink-2); font-size: 12px; }
+svg .label { fill: var(--ink-2); font-size: 11px; }
+svg:focus { outline: 2px solid var(--s1); outline-offset: 4px; border-radius: 4px; }
+.tip { position: fixed; pointer-events: none; background: var(--surface); border: 1px solid var(--ring); border-radius: 8px; padding: 8px 10px;
+       box-shadow: 0 4px 16px rgba(0,0,0,.12); font-size: 12px; z-index: 20; display: none; min-width: 140px; }
+.tip .t-head { color: var(--ink-2); margin-bottom: 4px; }
+.tip .row { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+.tip .row b { font-weight: 650; font-variant-numeric: tabular-nums; }
+.tip .row span { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); }
+table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+th, td { text-align: right; padding: 5px 8px; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; }
+th:first-child, td:first-child { text-align: left; }
+th { color: var(--ink-2); font-weight: 600; }
+.table-wrap { overflow-x: auto; }
+.status { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 13px; }
+.status i { font-style: normal; width: 18px; height: 18px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 11px; color: #fff; }
+.hyp h2 { margin-bottom: 6px; }
+.hyp .claim { color: var(--ink-2); font-size: 13px; margin: 6px 0 10px; }
+.hyp .evidence { font-size: 13px; overflow-wrap: anywhere; }
+.hyp details { margin-top: 8px; font-size: 12px; color: var(--ink-2); }
+.topo { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.svc { border: 1px solid var(--axis); border-radius: 8px; padding: 6px 8px; font-size: 12px; background: var(--page); }
+.svc b { display: block; font-size: 12px; }
+.svc small { color: var(--ink-2); }
+.hop { font-size: 12px; color: var(--ink-2); margin-top: 8px; }
+.big { font-size: 28px; font-weight: 650; }
+.notice { padding: 12px 14px; border: 1px solid var(--ring); border-radius: 10px; background: var(--wash); color: var(--ink-2); margin-top: 12px; }
+.empty { color: var(--muted); padding: 24px 0; text-align: center; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Monolith vs. microservices: where the crossover lies</h1>
+    <p class="sub">Measured results of the four-configuration testbed. Every number on this page comes from the analysis pipeline, not from the paper's text.</p>
+    <p class="meta" id="meta"></p>
+  </header>
+
+  <div class="filters" role="group" aria-label="Filters">
+    <label>Environment <select id="f-env"></select></label>
+    <label>Workload <span class="seg" id="f-wl"></span></label>
+    <label>Percentile <span class="seg" id="f-pct"></span></label>
+    <label>Load level <select id="f-rate"></select></label>
+  </div>
+
+  <div id="app" class="grid"></div>
+  <p class="empty" id="nodata" hidden>No results yet. Run <code>run/campaign.py</code>, then <code>analysis/analyze.py</code>.</p>
+</main>
+<div class="tip" id="tip" role="status"></div>
+
+<script src="data.js"></script>
+<script>
+"use strict";
+const DATA = window.CROSSOVER || {};
+const CFG = { A: "Monolith", B: "Coarse, 4 services", C: "Fine, 8 services", D: "Fine + Istio mesh" };
+const CFG_COLOR = { A: "--s1", B: "--s2", C: "--s3", D: "--s4" };
+const LAYERS = [["app", "Application"], ["db", "Database"], ["ser", "Serialisation"], ["net", "Inter-service network"], ["oth", "Framework dispatch"], ["edge", "Edge (client ↔ service)"]];
+const LAYER_COLOR = ["--s1", "--s2", "--s3", "--s4", "--s5", "--s6"];
+const WL = { browse: "Browse (read, shallow)", checkout: "Checkout (write, deep)" };
+const PCT = ["p50", "p95", "p99"];
+const HYP = {
+  H1: "At low load the monolith (A) has lower p99 latency than every microservice configuration.",
+  H2: "Under an equal resource budget, some microservice configuration overtakes the monolith's throughput within the tested concurrency range, and has a lower coherency penalty β.",
+  H3: "Istio sidecar overhead compounds with call-graph depth: ≥25% of end-to-end latency at ≥5 hops, growing at least linearly with hops."
+};
+const state = { env: null, wl: "browse", pct: "p99", rate: null };
+const $ = (s, el = document) => el.querySelector(s);
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const NS = "http://www.w3.org/2000/svg";
+
+function el(tag, attrs = {}, parent) {
+  const e = tag.startsWith("svg:") ? document.createElementNS(NS, tag.slice(4)) : document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "text") e.textContent = v; else if (k === "class") e.setAttribute("class", v); else e.setAttribute(k, v);
+  }
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function fmt(v, unit = "") {
+  if (v == null || !isFinite(v)) return "—";
+  const a = Math.abs(v);
+  if (a < 1e-9) return "0" + unit;                       // e.g. a USL beta fitted at its bound
+  if (Number.isInteger(v)) return v.toLocaleString("en-US") + unit;
+  const s = a >= 1000 ? Math.round(v).toLocaleString("en-US") : a >= 100 ? v.toFixed(0) : a >= 10 ? v.toFixed(1) : a >= 1 ? v.toFixed(2) : v.toPrecision(2);
+  return s + unit;
+}
+function ticksLog(lo, hi) {
+  const out = [];
+  for (let e = Math.floor(Math.log10(lo)); e <= Math.ceil(Math.log10(hi)); e++)
+    for (const m of [1, 2, 5]) { const t = m * 10 ** e; if (t >= lo * 0.999 && t <= hi * 1.001) out.push(t); }
+  return out.length > 7 ? out.filter(t => /^1/.test(String(t / 10 ** Math.floor(Math.log10(t))))) : out;
+}
+function ticksLin(lo, hi, n = 5) {
+  const step0 = (hi - lo) / n, p = 10 ** Math.floor(Math.log10(step0 || 1));
+  const step = [1, 2, 2.5, 5, 10].map(m => m * p).find(s => s >= step0) || p;
+  const out = [];
+  for (let t = Math.ceil(lo / step) * step; t <= hi + 1e-9; t += step) out.push(+t.toFixed(10));
+  return out;
+}
+function scale(lo, hi, a, b, log) {
+  if (log) { const L = Math.log(lo), H = Math.log(hi); return v => a + (Math.log(v) - L) / (H - L) * (b - a); }
+  return v => a + (v - lo) / (hi - lo || 1) * (b - a);
+}
+
+// ---------------------------------------------------------------- tooltip
+const tip = $("#tip");
+function showTip(evt, head, rows) {
+  tip.replaceChildren();
+  el("div", { class: "t-head", text: head }, tip);
+  for (const r of rows) {
+    const row = el("div", { class: "row" }, tip);
+    const name = el("span", {}, row);
+    if (r.color) el("i", { class: r.box ? "key-box" : "key-line", style: `background:var(${r.color})` }, name);
+    name.appendChild(document.createTextNode(r.label));
+    el("b", { text: r.value }, row);
+  }
+  tip.style.display = "block";
+  const x = evt.clientX ?? evt.x, y = evt.clientY ?? evt.y;
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  tip.style.left = Math.min(x + 14, innerWidth - w - 8) + "px";
+  tip.style.top = Math.max(8, Math.min(y - h / 2, innerHeight - h - 8)) + "px";
+}
+const hideTip = () => (tip.style.display = "none");
+
+// ---------------------------------------------------------------- charts
+/** Draw at the container's real pixel width so 11px text stays 11px (re-rendered on resize). */
+const width = host => Math.max(300, Math.round(host.getBoundingClientRect().width));
+/** series: [{key, label, color, points:[{x,y,lo,hi}], dots?, dashed?}] */
+function lineChart(host, { series, xLog = true, yLog = true, xTitle, yTitle, xUnit = "", yUnit = "", height = 300, fmtX = fmt }) {
+  const W = width(host), H = height, m = { l: 56, r: W < 480 ? 36 : 64, t: 10, b: 42 };
+  const pts = series.flatMap(s => s.points).filter(p => p.y != null && isFinite(p.y) && (!yLog || p.y > 0));
+  if (!pts.length) { el("p", { class: "empty", text: "No data for this selection." }, host); return; }
+  const xs = [...new Set(pts.map(p => p.x))].sort((a, b) => a - b);
+  let [x0, x1] = [Math.min(...xs), Math.max(...xs)];
+  let ys = pts.flatMap(p => [p.y, p.lo, p.hi]).filter(v => v != null && isFinite(v) && (!yLog || v > 0));
+  let [y0, y1] = [Math.min(...ys), Math.max(...ys)];
+  if (yLog) { y0 = 10 ** Math.floor(Math.log10(y0)); y1 = 10 ** Math.ceil(Math.log10(y1)); } else { y0 = Math.min(0, y0); y1 = y1 * 1.08; }
+  if (x0 === x1) { x0 = x0 / 2; x1 = x1 * 2; }
+  const X = scale(x0, x1, m.l, W - m.r, xLog), Y = scale(y0, y1, H - m.b, m.t, yLog);
+  const svg = el("svg:svg", { viewBox: `0 0 ${W} ${H}`, role: "img", tabindex: "0", "aria-label": `${yTitle} by ${xTitle}` }, host);
+  const g = el("svg:g", {}, svg);
+  for (const t of (yLog ? ticksLog(y0, y1) : ticksLin(y0, y1))) {
+    el("svg:line", { x1: m.l, x2: W - m.r, y1: Y(t), y2: Y(t), stroke: css("--grid"), "stroke-width": 1 }, g);
+    el("svg:text", { x: m.l - 8, y: Y(t) + 4, "text-anchor": "end", text: fmt(t) }, g);
+  }
+  for (const t of (xLog ? ticksLog(x0, x1) : ticksLin(x0, x1))) el("svg:text", { x: X(t), y: H - m.b + 16, "text-anchor": "middle", text: fmtX(t) }, g);
+  el("svg:line", { x1: m.l, x2: W - m.r, y1: H - m.b, y2: H - m.b, stroke: css("--axis") }, g);
+  el("svg:text", { class: "axis-title", x: (m.l + W - m.r) / 2, y: H - 6, "text-anchor": "middle", text: xTitle }, g);
+  el("svg:text", { class: "axis-title", x: 12, y: m.t + 2, text: yTitle, transform: `rotate(-90 12 ${m.t + 2})`, "text-anchor": "end" }, g);
+  const ends = [];
+  for (const s of series) {
+    const p = s.points.filter(q => q.y != null && isFinite(q.y) && (!yLog || q.y > 0));
+    if (!p.length) continue;
+    const color = css(s.color);
+    const band = p.filter(q => q.lo != null && q.hi != null && (!yLog || q.lo > 0));
+    if (band.length > 1 && !s.dots)
+      el("svg:path", { d: "M" + band.map(q => `${X(q.x)},${Y(q.hi)}`).join("L") + "L" + band.reverse().map(q => `${X(q.x)},${Y(q.lo)}`).join("L") + "Z",
+                       fill: color, "fill-opacity": 0.1 }, g);
+    if (s.dots) {
+      for (const q of p) {
+        if (q.lo != null && q.hi != null) el("svg:line", { x1: X(q.x), x2: X(q.x), y1: Y(Math.max(q.lo, y0)), y2: Y(q.hi), stroke: color, "stroke-width": 1.5 }, g);
+        el("svg:circle", { cx: X(q.x), cy: Y(q.y), r: 4, fill: color, stroke: css("--surface"), "stroke-width": 2 }, g);
+      }
+    } else {
+      el("svg:path", { d: "M" + p.map(q => `${X(q.x)},${Y(q.y)}`).join("L"), fill: "none", stroke: color, "stroke-width": 2,
+                       "stroke-linejoin": "round", "stroke-linecap": "round", ...(s.dashed ? { "stroke-dasharray": "5 4" } : {}) }, g);
+      const last = p[p.length - 1];
+      el("svg:circle", { cx: X(last.x), cy: Y(last.y), r: 4, fill: color, stroke: css("--surface"), "stroke-width": 2 }, g);
+      if (s.endLabel !== false) ends.push({ y: Y(last.y), x: X(last.x), label: s.short || s.key });
+    }
+  }
+  // direct end labels, skipped where they would collide (the legend always carries identity)
+  ends.sort((a, b) => a.y - b.y);
+  let prev = -99;
+  for (const e of ends) if (e.y - prev > 13) { el("svg:text", { class: "label", x: e.x + 9, y: e.y + 4, text: e.label }, g); prev = e.y; }
+  // crosshair: snaps to the nearest measured x, lists every series there
+  const cross = el("svg:line", { y1: m.t, y2: H - m.b, stroke: css("--axis"), "stroke-width": 1, visibility: "hidden" }, svg);
+  const hit = el("svg:rect", { x: m.l, y: m.t, width: W - m.l - m.r, height: H - m.t - m.b, fill: "transparent" }, svg);
+  let idx = -1;
+  const show = (i, evt) => {
+    idx = Math.max(0, Math.min(xs.length - 1, i));
+    const x = xs[idx];
+    cross.setAttribute("x1", X(x)); cross.setAttribute("x2", X(x)); cross.setAttribute("visibility", "visible");
+    const rows = series.map(s => {
+      const q = s.points.find(p => p.x === x);
+      return { color: s.color, label: s.label, value: q && q.y != null ? fmt(q.y, yUnit) + (q.note ? " " + q.note : "") : (q && q.note) || "—" };
+    });
+    const box = svg.getBoundingClientRect();
+    showTip(evt || { clientX: box.left + X(x) / W * box.width, clientY: box.top + box.height / 2 }, `${xTitle}: ${fmtX(x)}${xUnit}`, rows);
+  };
+  hit.addEventListener("pointermove", e => {
+    const box = svg.getBoundingClientRect(), px = (e.clientX - box.left) / box.width * W;
+    let best = 0; xs.forEach((x, i) => { if (Math.abs(X(x) - px) < Math.abs(X(xs[best]) - px)) best = i; });
+    show(best, e);
+  });
+  const leave = () => { cross.setAttribute("visibility", "hidden"); hideTip(); };
+  hit.addEventListener("pointerleave", leave);
+  svg.addEventListener("blur", leave);
+  svg.addEventListener("keydown", e => {
+    if (e.key === "ArrowRight" || e.key === "ArrowLeft") { e.preventDefault(); show((idx < 0 ? 0 : idx) + (e.key === "ArrowRight" ? 1 : -1)); }
+  });
+}
+
+/** rows: [{label, segs:[{key,label,color,value}]}] horizontal stacked bars with 2px surface gaps */
+function stackedBars(host, rows, unit = " ms", axisTitle = "Mean latency (ms), stacked by layer") {
+  const W = width(host), bar = 22, gapY = 18, m = { l: W < 480 ? 110 : 150, r: 70, t: 6, b: 30 };
+  const H = m.t + rows.length * (bar + gapY) + m.b;
+  const max = Math.max(...rows.map(r => r.segs.reduce((a, s) => a + Math.max(s.value || 0, 0), 0)), 1e-9);
+  const X = v => m.l + v / max * (W - m.l - m.r);
+  const svg = el("svg:svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Latency by layer" }, host);
+  for (const t of ticksLin(0, max, 4)) {
+    el("svg:line", { x1: X(t), x2: X(t), y1: m.t, y2: H - m.b, stroke: css("--grid") }, svg);
+    el("svg:text", { x: X(t), y: H - m.b + 16, "text-anchor": "middle", text: fmt(t) }, svg);
+  }
+  el("svg:text", { class: "axis-title", x: (m.l + W - m.r) / 2, y: H - 2, "text-anchor": "middle", text: axisTitle }, svg);
+  rows.forEach((r, i) => {
+    const y = m.t + i * (bar + gapY) + gapY / 2;
+    el("svg:text", { class: "label", x: m.l - 10, y: y + bar / 2 + 4, "text-anchor": "end", text: r.label }, svg);
+    let acc = 0;
+    const segs = r.segs.filter(s => s.value > 0);
+    segs.forEach((s, j) => {
+      const x0 = X(acc), x1 = X(acc + s.value), w = Math.max(x1 - x0 - (j < segs.length - 1 ? 2 : 0), 0.5);
+      const last = j === segs.length - 1, rad = Math.min(4, w / 2);
+      const d = last
+        ? `M${x0},${y}H${x0 + w - rad}Q${x0 + w},${y} ${x0 + w},${y + rad}V${y + bar - rad}Q${x0 + w},${y + bar} ${x0 + w - rad},${y + bar}H${x0}Z`
+        : `M${x0},${y}H${x0 + w}V${y + bar}H${x0}Z`;
+      const p = el("svg:path", { d, fill: css(s.color), tabindex: "0", "aria-label": `${r.label}, ${s.label}: ${fmt(s.value, unit)}` }, svg);
+      const on = e => { p.setAttribute("fill-opacity", 0.8); showTip(e, r.label, [{ color: s.color, box: true, label: s.label, value: fmt(s.value, unit) },
+        { label: "share of total", value: fmt(100 * s.value / r.segs.reduce((a, q) => a + Math.max(q.value || 0, 0), 0), "%") }]); };
+      const off = () => { p.setAttribute("fill-opacity", 1); hideTip(); };
+      p.addEventListener("pointermove", on); p.addEventListener("pointerleave", off);
+      p.addEventListener("focus", () => { const b = p.getBoundingClientRect(); on({ clientX: b.right, clientY: b.top + b.height / 2 }); });
+      p.addEventListener("blur", off);
+      acc += s.value;
+    });
+    el("svg:text", { class: "label", x: X(acc) + 8, y: y + bar / 2 + 4, text: fmt(acc, unit) }, svg);
+  });
+}
+
+function legend(host, items, kind = "line") {
+  const lg = el("div", { class: "legend" }, host);
+  for (const it of items) { const s = el("span", {}, lg); el("i", { class: `key-${kind}`, style: `background:var(${it.color})` }, s); s.appendChild(document.createTextNode(it.label)); }
+}
+
+function table(host, head, rows) {
+  const wrap = el("div", { class: "table-wrap" }, host), t = el("table", {}, wrap), tr = el("tr", {}, el("thead", {}, t));
+  head.forEach(h => el("th", { text: h, scope: "col" }, tr));
+  const tb = el("tbody", {}, t);
+  rows.forEach(r => { const row = el("tr", {}, tb); r.forEach(c => el("td", { text: c }, row)); });
+}
+
+/** A card whose body can flip between the chart and its table view. */
+function card(cls, title, desc, draw, tabulate) {
+  const c = el("section", { class: `card ${cls}` }, $("#app"));
+  const head = el("div", { class: "card-head" }, c), txt = el("div", {}, head);
+  el("h2", { text: title }, txt);
+  if (desc) el("p", { text: desc }, txt);
+  const body = el("div", {}, c);
+  let asTable = false;
+  const render = () => { body.replaceChildren(); asTable ? tabulate(body) : draw(body); };
+  if (tabulate) {
+    const b = el("button", { class: "ghost", type: "button", "aria-pressed": "false", text: "Table" }, head);
+    b.addEventListener("click", () => { asTable = !asTable; b.textContent = asTable ? "Chart" : "Table"; b.setAttribute("aria-pressed", asTable); render(); });
+  }
+  render();
+  return c;
+}
+
+// ---------------------------------------------------------------- views
+function statusBadge(v) {
+  const map = { supported: ["--good", "✓", "Supported"], falsified: ["--critical", "✕", "Falsified"], inconclusive: ["--warning", "?", "Inconclusive"] };
+  const [color, icon, label] = map[v] || ["--muted", "–", "Not tested"];
+  const s = el("span", { class: "status" });
+  el("i", { text: icon, style: `background:var(${color})` }, s);
+  s.appendChild(document.createTextNode(label));
+  return s;
+}
+
+function hypothesisEvidence(k, h) {
+  if (k === "H1" && h.tests) {
+    const t = h.tests.filter(x => x.workload === state.wl);
+    return t.map(x => `${x.config}/A p99 at ${x.rate}/s: ${fmt(x.est, "×")} [${fmt(x.lo)}, ${fmt(x.hi)}]`).join(" · ") || "No test for this workload.";
+  }
+  if (k === "H2" && h.rows) {
+    return h.rows.filter(r => r.workload === state.wl).map(r =>
+      `${r.config}: peak ${fmt(r.xmax_ratio, "×")} of A, β ${fmt(r.beta)} vs ${fmt(r.beta_A)}${r.measured_wins && r.measured_wins.length ? `, beats A at N=${r.measured_wins.join(",")}` : ", never beats A"}`).join(" · ");
+  }
+  if (k === "H3" && h.share_deep != null)
+    return `Mesh share at ${h.hops_deep} hops: ${fmt(100 * h.share_deep, "%")}; per-hop cost ${fmt(h.per_hop_shallow_ms, " ms")} at ${h.hops_shallow} hops vs ${fmt(h.per_hop_deep_ms, " ms")} at ${h.hops_deep}.`;
+  return h.rule || "";
+}
+
+function render() {
+  const S = DATA[state.env];
+  const app = $("#app");
+  app.replaceChildren();
+  if (!S) { $("#nodata").hidden = false; return; }
+  $("#nodata").hidden = true;
+  const M = S.meta, cfgs = S.configs;
+  $("#meta").textContent = `${S.env} · Kubernetes ${M.k8s || "?"} · ${M.nodes.length} nodes · ${M.reps} repetition${M.reps > 1 ? "s" : ""} × ${cfgs.length} configurations · `
+    + `budget ${M.budget.app_cpu / 1000} CPU app + ${M.budget.db_cpu / 1000} CPU db · ${M.open_step_s}s open-loop / ${M.closed_step_s}s closed-loop steps · ${M.started} → ${M.finished} (${fmt(M.hours)} h)`;
+  if (M.reps < 3) el("p", { class: "notice card", text: `Only ${M.reps} repetition${M.reps > 1 ? "s" : ""} in this environment: spreads are ranges, not confidence intervals, and verdicts are provisional.` }, app);
+
+  // hypotheses
+  for (const k of ["H1", "H2", "H3"]) {
+    const h = (S.hypotheses || {})[k] || {};
+    const c = el("section", { class: "card third hyp" }, app);
+    el("h2", { text: k }, c);
+    c.appendChild(statusBadge(h.verdict));
+    el("p", { class: "claim", text: HYP[k] }, c);
+    el("p", { class: "evidence", text: hypothesisEvidence(k, h) }, c);
+    const d = el("details", {}, c); el("summary", { text: "Falsification rule" }, d); el("p", { text: h.rule || "" }, d);
+  }
+
+  // topology
+  for (const cfg of cfgs) {
+    const c = el("section", { class: "card quarter" }, app);
+    const h = el("h2", {}, c); el("i", { class: "key-dot", style: `background:var(${CFG_COLOR[cfg]});margin-right:8px` }, h); h.appendChild(document.createTextNode(`${cfg} · ${CFG[cfg]}`));
+    const topo = el("div", { class: "topo" }, c);
+    for (const [svc, mods] of Object.entries(M.topology[cfg] || {})) { const b = el("div", { class: "svc" }, topo); el("b", { text: svc }, b); el("small", { text: mods.join(", ") }, b); }
+    const hops = (S.hops[cfg] || {})[state.wl];
+    el("p", { class: "hop", text: `${WL[state.wl]}: ${hops ?? "?"} remote call${hops === 1 ? "" : "s"} per request${cfg === "D" ? ", each through two sidecars" : ""}` }, c);
+  }
+
+  // open-loop latency
+  const pct = state.pct;
+  const openSeries = cfgs.map(cfg => ({
+    key: cfg, short: cfg, label: CFG[cfg], color: CFG_COLOR[cfg],
+    points: (S.open[cfg]?.[state.wl] || []).map(r => r.sat > 0 ? { x: r.rate, y: null, note: "saturated" } : { x: r.rate, y: r[pct]?.med, lo: r[pct]?.lo, hi: r[pct]?.hi })
+  }));
+  card("", `${pct} latency vs. offered load`, `Open-loop constant arrival rate (no coordinated omission). Band: ${M.reps >= 5 ? "95% CI" : "range"} across repetitions. Saturated steps (>5% errors or throughput <90% of offered) are omitted.`,
+    b => { legend(b, cfgs.map(c => ({ label: `${c} · ${CFG[c]}`, color: CFG_COLOR[c] }))); lineChart(b, { series: openSeries, xTitle: "Offered load", xUnit: " req/s", yTitle: `${pct} latency (ms)`, yUnit: " ms" }); },
+    b => table(b, ["Rate (req/s)", ...cfgs.map(c => `${c} ${pct} (ms)`), ...cfgs.map(c => `${c} errors`)],
+      [...new Set(cfgs.flatMap(c => (S.open[c]?.[state.wl] || []).map(r => r.rate)))].sort((a, b) => a - b).map(rate => {
+        const rs = cfgs.map(c => (S.open[c]?.[state.wl] || []).find(r => r.rate === rate));
+        return [rate, ...rs.map(r => r ? fmt(r[pct]?.med) + (r.sat > 0 ? " (sat.)" : "") : "—"), ...rs.map(r => r ? fmt(100 * (r.err?.med || 0), "%") : "—")];
+      })));
+
+  // closed-loop + USL
+  const closedSeries = cfgs.flatMap(cfg => {
+    const u = S.usl[cfg]?.[state.wl];
+    return [{ key: cfg, label: `${CFG[cfg]} (measured)`, color: CFG_COLOR[cfg], dots: true, endLabel: false,
+              points: (S.closed[cfg]?.[state.wl] || []).map(r => ({ x: r.n, y: r.x?.med, lo: r.x?.lo, hi: r.x?.hi })) },
+            ...(u && u.curve ? [{ key: cfg, short: cfg, label: `${CFG[cfg]} (USL fit)`, color: CFG_COLOR[cfg], points: u.curve.map(([x, y]) => ({ x, y })) }] : [])];
+  });
+  card("half", "Throughput vs. concurrency, with USL fit", "Closed loop, N concurrent clients, zero think time. Dots: median across repetitions (bars: spread). Lines: Universal Scalability Law fit.",
+    b => { legend(b, cfgs.map(c => ({ label: `${c} · ${CFG[c]}`, color: CFG_COLOR[c] })), "dot"); lineChart(b, { series: closedSeries, xTitle: "Concurrency N", yTitle: "Throughput (req/s)", yUnit: " req/s", yLog: false, fmtX: v => fmt(v) }); },
+    b => table(b, ["N", ...cfgs.map(c => `${c} X (req/s)`)],
+      [...new Set(cfgs.flatMap(c => (S.closed[c]?.[state.wl] || []).map(r => r.n)))].sort((a, b) => a - b).map(n =>
+        [n, ...cfgs.map(c => fmt((S.closed[c]?.[state.wl] || []).find(r => r.n === n)?.x?.med))])));
+
+  card("half", "Universal Scalability Law parameters", "X(N) = λN / (1 + α(N−1) + βN(N−1)). α: contention, β: coherency. N* = √((1−α)/β) is the concurrency of peak throughput.",
+    b => {
+      table(b, ["Config", "λ (req/s)", "α", "β", "N*", "Peak X", "R²adj", "vs A"], cfgs.map(c => {
+        const u = S.usl[c]?.[state.wl] || {}, x = S.crossover[state.wl]?.[c] || {};
+        const ci = k => (u[`${k}_ci`] && u[`${k}_ci`][0] != null) ? ` [${fmt(u[`${k}_ci`][0])}, ${fmt(u[`${k}_ci`][1])}]` : "";
+        return [`${c} · ${CFG[c]}`, fmt(u.lambda), fmt(u.alpha) + ci("alpha"), fmt(u.beta) + ci("beta"), fmt(u.nstar), fmt(u.xmax), fmt(u.r2adj), c === "A" ? "—" : fmt(x.xmax_ratio, "×")];
+      }));
+      const cross = cfgs.filter(c => c !== "A").map(c => {
+        const x = S.crossover[state.wl]?.[c] || {};
+        return `${c}: ${x.throughput_n ? `throughput crossover at N ≈ ${fmt(x.throughput_n)}` : "no throughput crossover in the tested range"}; ${x.latency_rate ? `lower ${"p99"} than A from ${x.latency_rate} req/s` : "never lower p99 than A"}`;
+      });
+      el("p", { class: "notice", text: cross.join(" · ") }, b);
+    });
+
+  // layers at selected rate
+  const rate = state.rate;
+  const layerRows = cfgs.map(cfg => {
+    const r = (S.open[cfg]?.[state.wl] || []).find(x => x.rate === rate);
+    return { label: `${cfg} · ${CFG[cfg]}`, sat: r && r.sat > 0, segs: LAYERS.map(([k, label], i) => ({ key: k, label, color: LAYER_COLOR[i], value: r ? r.layers[k]?.med : null })) };
+  }).filter(r => r.segs.some(s => s.value != null));
+  card("half", `Where the time goes at ${rate} req/s`, "Mean per-request latency split into measured layers (Server-Timing propagated through every hop; edge = client-observed minus the edge service's own total).",
+    b => { if (!layerRows.length) return el("p", { class: "empty", text: "No step at this load level." }, b);
+           legend(b, LAYERS.map(([, l], i) => ({ label: l, color: LAYER_COLOR[i] })), "box"); stackedBars(b, layerRows); },
+    b => table(b, ["Config", ...LAYERS.map(l => l[1] + " (ms)"), "Total"], layerRows.map(r => [r.label + (r.sat ? " (saturated)" : ""), ...r.segs.map(s => fmt(s.value)), fmt(r.segs.reduce((a, s) => a + (s.value || 0), 0))])));
+
+  // CPU cost and bottleneck at selected rate (cgroup cpu.stat deltas over the step)
+  const TIERS = [["app", "Application tier", "--s1"], ["db", "Database tier", "--s2"], ["mesh", "Istio sidecars", "--s7"]];
+  const cpuOf = cfg => (S.open[cfg]?.[state.wl] || []).find(x => x.rate === rate)?.cpu;
+  const cpuRows = cfgs.map(cfg => ({ label: `${cfg} · ${CFG[cfg]}`,
+    segs: TIERS.map(([k, label, color]) => ({ key: k, label, color, value: cpuOf(cfg)?.cpu_ms_per_req?.[k] ?? null })) }))
+    .filter(r => r.segs.some(s => s.value != null));
+  card("half", `CPU cost per request at ${rate} req/s`, "CPU time consumed per successful request, from each container's cgroup counters over the step. The table lists every container's utilisation of its CPU limit and the share of CFS periods in which it was throttled.",
+    b => { if (!cpuRows.length) return el("p", { class: "empty", text: "No cgroup data for this step (collected from the main campaign on)." }, b);
+           legend(b, TIERS.map(([, l, c]) => ({ label: l, color: c })), "box"); stackedBars(b, cpuRows, " ms", "CPU milliseconds per request, stacked by tier"); },
+    b => table(b, ["Config", "Container", "CPU (cores)", "Share of limit", "Throttled periods"],
+      cfgs.flatMap(cfg => Object.entries(cpuOf(cfg)?.containers || {}).sort((x, y) => (y[1].util || 0) - (x[1].util || 0))
+        .map(([k, v]) => [cfg, k, fmt(v.cores), v.util != null ? fmt(100 * v.util, "%") : "—", v.thr != null ? fmt(100 * v.thr, "%") : "—"]))));
+
+  // CDF at selected rate
+  const qs = [...Array(100).keys(), 99.5, 99.9, 100];
+  const cdfSeries = cfgs.map(cfg => {
+    const r = (S.open[cfg]?.[state.wl] || []).find(x => x.rate === rate);
+    return { key: cfg, short: cfg, label: CFG[cfg], color: CFG_COLOR[cfg], endLabel: false, points: r && r.cdf ? r.cdf.map((v, i) => ({ x: +v.toFixed(3), y: qs[i] })).filter(p => p.x > 0) : [] };
+  });
+  card("half", `Latency distribution at ${rate} req/s`, "Cumulative share of requests completed within a latency, pooled across repetitions.",
+    b => { legend(b, cfgs.map(c => ({ label: `${c} · ${CFG[c]}`, color: CFG_COLOR[c] }))); cdfChart(b, cdfSeries); },
+    b => table(b, ["Percentile", ...cfgs.map(c => `${c} (ms)`)], [50, 90, 95, 99, 99.9].map(p => [`p${p}`, ...cdfSeries.map(s => { const i = qs.indexOf(p); const r = (S.open[s.key]?.[state.wl] || []).find(x => x.rate === rate); return r ? fmt(r.cdf[i]) : "—"; })])));
+
+  // mesh
+  const mesh = S.mesh?.[state.wl] || [];
+  card("", "Service-mesh cost (D − C at equal load)", "Istio's price, isolated as the only difference between configurations C and D: extra inter-service transit per hop, extra database round-trip time per request, and the share of D's end-to-end latency it explains.",
+    b => {
+      if (!mesh.length) return el("p", { class: "empty", text: "Needs configurations C and D below saturation." }, b);
+      legend(b, [{ label: "Inter-service transit, per hop", color: "--s6" }, { label: "Database round trips, per request", color: "--s7" }]);
+      lineChart(b, { height: 260, yLog: false, xTitle: "Offered load", xUnit: " req/s", yTitle: "Added latency (ms)", yUnit: " ms", series: [
+        { key: "hop", short: "per hop", label: "Inter-service, per hop", color: "--s6", points: mesh.filter(r => r.net_per_hop).map(r => ({ x: r.rate, y: r.net_per_hop.est, lo: r.net_per_hop.lo, hi: r.net_per_hop.hi })) },
+        { key: "db", short: "DB", label: "DB round trips", color: "--s7", points: mesh.map(r => ({ x: r.rate, y: r.db.est, lo: r.db.lo, hi: r.db.hi })) }] });
+    },
+    b => table(b, ["Rate (req/s)", "Hops", "Net / hop (ms)", "DB (ms)", "End-to-end (ms)", "Share of D"], mesh.map(r => [r.rate, r.hops, fmt(r.net_per_hop?.est), fmt(r.db.est), fmt(r.e2e.est), fmt(100 * r.share, "%")])));
+
+  // data quality
+  const q = el("section", { class: "card" }, app);
+  el("h2", { text: "Data quality and provenance" }, q);
+  const eq = cfgs.flatMap(c => Object.entries(S.equivalence[c] || {}).map(([wl, v]) => [`${c} · ${wl}`, `${v.match} / ${v.total}`]));
+  const drops = Object.entries(S.dropped || {}).map(([k, v]) => `${k}: ${v.join(", ")}`);
+  el("p", { class: "sub", style: "margin:6px 0 10px", text: "Equivalence: response bodies of the same 100 requests per workload, hashed and compared with the monolith's. Dropped steps: a pod restarted during the step, so it is excluded." }, q);
+  table(q, ["Config · workload", "Bodies identical to A"], eq);
+  el("p", { class: "notice", text: drops.length ? `Dropped steps: ${drops.join(" · ")}` : "No steps dropped: no pod restarted during any measurement." }, q);
+  table(q, ["Node", "Role", "CPU", "Memory", "Kernel", "Runtime"], M.nodes.map(n => [n.name, n.role, n.cpu, fmt(parseInt(n.memory) / 1024 ** 2, " GiB"), n.kernel, n.runtime]));
+}
+
+function cdfChart(host, series) {
+  const s = series.map(x => ({ ...x, points: x.points.map(p => ({ x: p.x, y: p.y })) }));
+  // x = latency (log), y = percentile; reuse the line chart with swapped roles
+  lineChart(host, { series: s.map(x => ({ ...x, points: x.points })), xTitle: "Latency (ms)", xUnit: " ms", yTitle: "Requests completed (%)", yUnit: "%", yLog: false, height: 280 });
+}
+
+// ---------------------------------------------------------------- filters
+function seg(host, options, key, labels = {}) {
+  host.replaceChildren();
+  for (const o of options) {
+    const b = el("button", { type: "button", "aria-pressed": String(state[key] === o), text: labels[o] || o }, host);
+    b.addEventListener("click", () => { state[key] = o; syncRates(); build(); });
+  }
+}
+function syncRates() {
+  const S = DATA[state.env]; const sel = $("#f-rate");
+  const rates = S ? [...new Set(S.configs.flatMap(c => (S.open[c]?.[state.wl] || []).map(r => r.rate)))].sort((a, b) => a - b) : [];
+  if (!rates.includes(state.rate)) state.rate = rates[0];
+  sel.replaceChildren(...rates.map(r => el("option", { value: r, text: `${r} req/s` })));
+  sel.value = state.rate;
+}
+function build() {
+  seg($("#f-wl"), ["browse", "checkout"], "wl", { browse: "Browse", checkout: "Checkout" });
+  seg($("#f-pct"), PCT, "pct");
+  render();
+}
+const envs = Object.keys(DATA).filter(e => e !== "calib").concat(Object.keys(DATA).filter(e => e === "calib"));
+state.env = envs[0];
+$("#f-env").replaceChildren(...envs.map(e => el("option", { value: e, text: e })));
+$("#f-env").addEventListener("change", e => { state.env = e.target.value; syncRates(); build(); });
+$("#f-rate").addEventListener("change", e => { state.rate = +e.target.value; render(); });
+// Chart colours are resolved when drawn, so redraw when the viewer switches theme.
+new MutationObserver(render).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
+let resizeTimer;
+addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(render, 150); });
+syncRates();
+build();
+</script>
+</body>
+</html>
