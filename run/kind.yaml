@@ -1,0 +1,12 @@
+# Local environment: one control plane, one load-generator node, two nodes for the system under test.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: crossover
+nodes:
+  - role: control-plane
+  - role: worker
+    labels: {crossover/role: loadgen}
+  - role: worker
+    labels: {crossover/role: sut}
+  - role: worker
+    labels: {crossover/role: sut}
