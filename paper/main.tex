@@ -1,10 +1,10 @@
 % Journal manuscript. The document class is swapped for the target journal's template at submission;
 % everything below \begin{document} is template-neutral.
-\documentclass[11pt]{article}
+\documentclass[12pt]{article}
 \usepackage[margin=2.5cm]{geometry}
 \usepackage[T1]{fontenc}
-\usepackage{lmodern}
-\usepackage{amsmath,amssymb}
+\usepackage{amsmath}
+\usepackage{newtxtext,newtxmath}  % Times, as the journal prefers; provides the AMS symbols
 \usepackage{booktabs}
 \usepackage{array}
 \usepackage[section]{placeins}
@@ -50,8 +50,8 @@
 \title{Where Does Decomposition Pay Off? A Controlled, Layer-Resolved Performance Comparison
 of Monolithic and Microservice Deployments on Kubernetes}
 % TODO(author): supervisor's full name, title, ORCID and e-mail; decide the corresponding author.
-\author{Sarvar Saidazov \and \textbf{[Supervisor name]}\\[2pt]
-Faculty of Information Technology, Kazakh-British Technical University, Almaty, Kazakhstan\\
+\author{Sarvar Saidazov and \textbf{[Supervisor name]}\\[2pt]
+Faculty of Information Technology\\Kazakh-British Technical University, Almaty, Kazakhstan\\
 \texttt{s\_saidazov@kbtu.kz}, \textbf{[supervisor e-mail]}}
 \date{}
 
@@ -62,8 +62,18 @@ Faculty of Information Technology, Kazakh-British Technical University, Almaty, 
 \input{sections/abstract}
 \end{abstract}
 
-{\raggedright\noindent\textbf{Keywords:} microservices; monolithic architecture; performance evaluation; tail latency;
-service mesh; Kubernetes; Universal Scalability Law; CPU throttling\par}
+{\raggedright\noindent\textbf{Keywords:} microservices; performance evaluation; tail latency; service mesh;
+Kubernetes; CPU throttling\par}
+
+\paragraph{Practitioner points.}
+\begin{itemize}
+\item Under an equal CPU budget, splitting this application into services lowered peak throughput to a quarter or
+less of the monolith's; decomposition did not pay off at any load.
+\item Each synchronous call between services cost about 0.4\,ms of transit and a few tenths of a millisecond of CPU,
+and a sidecar mesh roughly doubled the transit cost; measure this per-hop price before deciding how finely to split.
+\item In decomposed deployments the edge service's CPU quota set the capacity, and CFS throttling made tail latency
+erratic before average utilisation reached the limit; watch the edge service's throttled-period counter.
+\end{itemize}
 
 \input{sections/intro}
 \input{sections/background}
@@ -83,9 +93,16 @@ Every number in Sections~\ref{sec:results} and~\ref{sec:discussion} is generated
 % TODO(author): fill in before submission.
 \paragraph{Funding.} \textbf{[No external funding / grant name and number.]}
 \paragraph{Conflict of interest.} The authors declare no conflict of interest.
+\paragraph{Ethics approval.} Not applicable: the study involves no human participants or personal data.
 \paragraph{Author contributions.} S.~Saidazov: conceptualisation, methodology, software, investigation, formal
 analysis, writing (original draft). \textbf{[Supervisor]}: supervision, writing (review and editing).
 \paragraph{Acknowledgements.} \textbf{[Optional.]}
+% TODO(author): review this statement and make sure it describes your use of AI tools accurately (Wiley policy).
+\paragraph{Use of generative AI.} The authors used Claude (Anthropic) to assist with implementing the testbed,
+campaign and analysis scripts, auditing the references against Crossref, and drafting and editing the manuscript.
+All measurements were produced by the published testbed on the infrastructure described in
+Section~\ref{sec:method}, and every reported number is generated from the archived raw data by the published
+analysis pipeline. The authors reviewed and verified all content and take full responsibility for it.
 
 \bibliographystyle{unsrt}
 \bibliography{references}

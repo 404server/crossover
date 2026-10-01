@@ -7,7 +7,7 @@ request carries a W3C Server-Timing breakdown that assigns its latency to applic
 network, framework and edge layers without clock synchronisation; cgroup counters record each container's CPU use
 and throttling. Across \xo{cells} fresh deployments, decomposition raised low-load p99 latency to
 \xo{ratio/browse/B/50/est}--\xo{ratio/checkout/D/25/est} times the monolith's, mostly as inter-service transit of
-about 0.4\,ms per hop rather than serialisation. Capacity fell to \xo{xmaxratio/browse/C}--\xo{xmaxratio/checkout/B}
+about 0.4\,ms per hop rather than serialisation. Capacity fell to \xo{xmaxpct/browse/C}--\xo{xmaxpct/checkout/B}\%
 of the monolith's, and no throughput crossover appeared at any load: the decomposed configurations were limited by
 the CPU quota of their edge service, whose CFS throttling also made tail latency erratic well below its nominal
 limit. The mesh added \xo{mesh/browse/200/perhop}--\xo{mesh/checkout/25/perhop}\,ms per hop, explained

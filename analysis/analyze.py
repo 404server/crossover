@@ -630,6 +630,7 @@ def paper_outputs(s, gen_dir):
     for wl, d in s["crossover"].items():
         for cfg, c in d.items():
             nums[f"xmaxratio/{wl}/{cfg}"] = fmt(c.get("xmax_ratio"))
+            nums[f"xmaxpct/{wl}/{cfg}"] = fmt(100 * c["xmax_ratio"], 2) if c.get("xmax_ratio") else "--"
             nums[f"crossn/{wl}/{cfg}"] = fmt(c["throughput_n"]) if c.get("throughput_n") else "none"
             nums[f"crossrate/{wl}/{cfg}"] = c["latency_rate"] if c.get("latency_rate") else "none"
     for wl, d in s["compare"].items():
