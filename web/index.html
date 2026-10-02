@@ -411,18 +411,25 @@ function render() {
               points: (S.closed[cfg]?.[state.wl] || []).map(r => ({ x: r.n, y: r.x?.med, lo: r.x?.lo, hi: r.x?.hi })) },
             ...(u && u.curve ? [{ key: cfg, short: cfg, label: `${CFG[cfg]} (USL fit)`, color: CFG_COLOR[cfg], points: u.curve.map(([x, y]) => ({ x, y })) }] : [])];
   });
-  card("half", "Throughput vs. concurrency, with USL fit", "Closed loop, N concurrent clients, zero think time. Dots: median across repetitions (bars: spread). Lines: Universal Scalability Law fit.",
+  card("half", "Throughput vs. concurrency, with USL fit", "Closed loop, N concurrent clients, zero think time. Dots: median across repetitions (bars: range). Lines: Universal Scalability Law fit.",
     b => { legend(b, cfgs.map(c => ({ label: `${c} · ${CFG[c]}`, color: CFG_COLOR[c] })), "dot"); lineChart(b, { series: closedSeries, xTitle: "Concurrency N", yTitle: "Throughput (req/s)", yUnit: " req/s", yLog: false, fmtX: v => fmt(v) }); },
     b => table(b, ["N", ...cfgs.map(c => `${c} X (req/s)`)],
       [...new Set(cfgs.flatMap(c => (S.closed[c]?.[state.wl] || []).map(r => r.n)))].sort((a, b) => a - b).map(n =>
         [n, ...cfgs.map(c => fmt((S.closed[c]?.[state.wl] || []).find(r => r.n === n)?.x?.med))])));
 
-  card("half", "Universal Scalability Law parameters", "X(N) = λN / (1 + α(N−1) + βN(N−1)). α: contention, β: coherency. N* = √((1−α)/β) is the concurrency of peak throughput.",
+  if (S.peak) card("half", "Measured capacity", "Peak: highest median closed-loop throughput, with a 95% interval from resampling repetitions. Bound: X / U of the busiest container at the highest sustained open-loop rate.",
+    b => table(b, ["Config", "Peak (req/s)", "at N", "vs A", "Bound (req/s)", "Bottleneck"], cfgs.map(c => {
+      const pk = S.peak[c]?.[state.wl], a = S.peak.A?.[state.wl], bd = S.bound?.[c]?.[state.wl];
+      return [`${c} · ${CFG[c]}`, pk ? `${fmt(pk.est)} [${fmt(pk.lo)}, ${fmt(pk.hi)}]` : "—", pk ? pk.n : "—",
+              c === "A" || !pk || !a ? "—" : fmt(pk.est / a.est, "×"), bd ? fmt(bd.bound) : "—", bd ? bd.container : "—"];
+    })));
+
+  card("half", "Universal Scalability Law fit", "X(N) = λN / (1 + α(N−1) + βN(N−1)), fitted with 0 ≤ α, β ≤ 1. A secondary description: capacity figures use the measured peak.",
     b => {
-      table(b, ["Config", "λ (req/s)", "α", "β", "N*", "Peak X", "R²adj", "vs A"], cfgs.map(c => {
-        const u = S.usl[c]?.[state.wl] || {}, x = S.crossover[state.wl]?.[c] || {};
+      table(b, ["Config", "λ (req/s)", "α", "β", "N*", "X_max (fit)", "R²adj"], cfgs.map(c => {
+        const u = S.usl[c]?.[state.wl] || {};
         const ci = k => (u[`${k}_ci`] && u[`${k}_ci`][0] != null) ? ` [${fmt(u[`${k}_ci`][0])}, ${fmt(u[`${k}_ci`][1])}]` : "";
-        return [`${c} · ${CFG[c]}`, fmt(u.lambda), fmt(u.alpha) + ci("alpha"), fmt(u.beta) + ci("beta"), fmt(u.nstar), fmt(u.xmax), fmt(u.r2adj), c === "A" ? "—" : fmt(x.xmax_ratio, "×")];
+        return [`${c} · ${CFG[c]}`, fmt(u.lambda), fmt(u.alpha) + ci("alpha"), fmt(u.beta) + ci("beta"), fmt(u.nstar), fmt(u.xmax), fmt(u.r2adj)];
       }));
       const cross = cfgs.filter(c => c !== "A").map(c => {
         const x = S.crossover[state.wl]?.[c] || {};

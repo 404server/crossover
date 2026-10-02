@@ -46,8 +46,11 @@
   \input{generated/#2/numbers.tex}\let\xodef\xodefplain}{}}
 \xoload{prop}{kind-prop}  % demand-proportional allocation
 \xoload{eks}{eks}         % cloud environment
+\xoload{work}{kind-work}  % service demand: 1 ms CPU per module operation, equal split
+\xoload{workprop}{kind-work-prop}  % the same, demand-proportional
 % equal vs. proportional comparison (analysis/compare_alloc.py); keys carry the alloc/ prefix
 \IfFileExists{generated/numbers-alloc.tex}{\input{generated/numbers-alloc.tex}}{}
+\IfFileExists{generated/numbers-work.tex}{\input{generated/numbers-work.tex}}{}
 % autoscaling treatment; its keys already carry the hpa/ prefix
 \IfFileExists{generated/eks-hpa/numbers-hpa.tex}{\input{generated/eks-hpa/numbers-hpa.tex}}{}
 % Table bodies are \input inside tabular; the primitive form keeps \bottomrule legal after them.
