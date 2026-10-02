@@ -17,8 +17,8 @@ H3 & mesh $<25\%$ of end-to-end latency at six hops, or per-hop cost shrinking w
 \end{table}
 
 Table~\ref{tab:verdicts} summarises the three tests. Decomposition costs latency at low load (H1) and the mesh's
-cost compounds with depth (H3), as predicted. The central hypothesis, that horizontal decomposition eventually
-overtakes the monolith (H2), is falsified for an equal CPU budget: the monolith's capacity was four to sixteen times
-that of the decomposed configurations, and no crossover appeared at any load. Allocating the budget in proportion
+cost grows with the number of hops (H3), as predicted. The central hypothesis, that horizontal decomposition eventually
+overtakes the monolith (H2), is falsified for an equal CPU budget: the monolith's capacity was \xo{peakfactor/min} to
+\xo{peakfactor/max} times that of the decomposed configurations, and no crossover appeared at any load. Allocating the budget in proportion
 to demand raised their capacity relative to the monolith by a factor of \xo{alloc/gainmin}--\xo{alloc/gainmax}
 but did not close the gap.

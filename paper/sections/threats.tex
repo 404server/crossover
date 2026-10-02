@@ -7,7 +7,12 @@ worker thread) is not visible to the filter: on an inner hop it lands in the cal
 the edge hop in the \emph{edge} layer. Under saturation both layers therefore contain queueing as well as
 transport, and we interpret them that way. Application time is a residual of the handler's duration, so it also
 absorbs JVM effects such as garbage-collection pauses that fall inside a handler. Throughput in the closed-loop
-sweeps counts only successful responses. The USL is a phenomenological model; a good fit does not identify
+sweeps counts only successful responses. In~D part of the kernel's network processing for a request runs in
+the sidecar's cgroup rather than the application's, which is consistent with D's edge application container
+needing less CPU per request than C's. D's application budget therefore buys slightly more application work than
+C's. On the Apple-silicon host, vCPUs run on both performance and efficiency cores, so the same CFS quota buys
+different amounts of work depending on where a vCPU is scheduled. Throttling measured there may overstate what
+the same quota causes on uniform server cores. The USL is a phenomenological model; a good fit does not identify
 the mechanism behind $\alpha$ and $\beta$, which is why Section~\ref{sec:results} pairs every fit with the
 measured CPU utilisation and throttling of the containers involved.
 
@@ -26,6 +31,21 @@ results depend on the controller's settings and on the step length. With 180\,s 
 warm-up falls inside the measurement, which is part of what elasticity costs. A longer level, a lower utilisation
 target or warmed replicas would shift the sustained rates.
 
+The procedure has a fixed order. Rate and concurrency levels always ascend, browse always precedes checkout on the
+same deployment, and the closed-loop sweep follows the open-loop sweep. Level is therefore confounded with time
+since deployment, and a decomposed configuration starts its closed-loop sweep after its overloaded open-loop
+levels. The recovery probe limits this carry-over but cannot rule it out, and it may contribute to the dip in the
+closed-loop curves of B and C at moderate concurrency. Database state also changes during a cell. Orders and
+reservations are append-only and the ten popular stock rows are updated in place, so the databases grow and
+accumulate dead tuples, most in the monolith's single database, which serves every write; autovacuum may run
+during measurement. All PostgreSQL instances keep their data on volumes of their node with \texttt{fsync} enabled,
+and in~C a checkout commits in three databases that can share one disk. In the proportional campaign, B, C and~D
+are redeployed for checkout with the checkout shares, whereas A, whose allocation is the same for both workloads,
+runs checkout on the deployment that served browse. Finally, some data were excluded. In the proportional campaign
+three open-loop steps of one cell (C, browse at 600, 800 and 1{,}000 requests per second) were dropped because the
+host slept. An earlier local campaign that a host suspension interrupted was discarded entirely, as was the first
+cloud campaign (Section~\ref{sec:procedure}). Their logs are archived with the data.
+
 \paragraph{The measurement environment.} All nodes of the kind cluster, including the load generator's, share
 one host's CPUs. The load generator was not CPU-limited, and the system under test could not take more than its
 CPU limits, but the two still share caches, memory bandwidth and the hypervisor's scheduler. Inter-node traffic
@@ -35,8 +55,11 @@ property of the host rather than of any configuration: in the monolith, browse p
 \xo{p99/browse/A/800}\,ms at 800. A separate control run ruled out JIT warm-up as the cause: the penalty persisted
 after a closed-loop warm-up of about 580{,}000 requests (p99 4.0\,ms at 50 requests per second against 0.85\,ms at
 800) and reappeared on returning to 50 requests per second after the high-rate step (4.8\,ms). We attribute it to CPU idle-state exits and thread wake-ups when requests arrive 20\,ms apart.
-It affects every configuration, but configurations with more hops wake more threads per request, so it may
-slightly inflate their low-load ratios in Table~\ref{tab:h1}. On bare metal it can be controlled by pinning the
+It affects every configuration, but configurations with more hops wake more threads per request, so it inflates
+their low-load ratios in Table~\ref{tab:h1}. At the lowest rate the H1 ratios were
+\xo{h1/min}--\xo{h1/max}, but at 200 browse requests per second they were \xo{ratio/browse/B/200/est} (B),
+\xo{ratio/browse/C/200/est} (C) and \xo{ratio/browse/D/200/est} (D). The size of the low-load penalty therefore
+depends on the reference rate, while its sign does not. On bare metal it can be controlled by pinning the
 CPU frequency governor and limiting idle states, which is part of the protocol for the remaining environments.
 
 Low-load tail latency also drifted between campaigns. The monolith, deployed identically, had a browse p99 at
@@ -53,7 +76,11 @@ each configuration in this environment rather than a controlled factor.
 
 \paragraph{External validity.} The application is small and synthetic, written in one language and one
 framework. Its per-request business logic is cheap, so the fixed costs of distribution (serialisation, HTTP,
-network) weigh more than they would in a service that spends tens of milliseconds computing. Communication is
+network) weigh more than they would in a service that spends milliseconds computing. The service-demand treatment
+adds 1\,ms of CPU to every module operation to show how the conclusions shift as that ratio changes. Each run also
+exercises one operation, so the modules it does not use are idle by construction. A mixed workload would spread
+demand across services and reduce the fragmentation penalty of the equal split. The proportional allocation, tuned
+to each operation, cannot be applied to such a mix as it stands. Communication is
 JSON over HTTP/1.1; binary protocols such as gRPC over HTTP/2 reduce serialisation and connection costs and
 could change the magnitudes, although not the direction, of the per-hop results. All databases are PostgreSQL
 instances co-located in the same cluster. The mesh is Istio~1.31 with sidecars; sidecar-less data planes such as

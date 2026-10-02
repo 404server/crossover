@@ -40,7 +40,9 @@ D & as C, every pod with an Istio sidecar & 8+8 & 0.5 (+ sidecar) & 0.25 (+ side
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:configs} lists the configurations. Config~A is the monolith. Config~B groups the modules into
+Table~\ref{tab:configs} lists the configurations. Config~A is the monolith. Its modules are separated by
+interfaces and own their tables, so it is a modular monolith in the sense of Section~\ref{sec:background}, the
+style for which empirical performance data are scarce~\cite{AlQoran2025}. Config~B groups the modules into
 four services along domain lines, the grouping most teams would choose first. Config~C gives every module its own
 service. Config~D is C with an Istio~1.31 service mesh injected into every pod, including the database pods;
 it isolates the mesh as the single added variable. The earlier protocol's Config~D also added asynchronous
@@ -106,8 +108,8 @@ otherwise pick the serial collector for the fine-grained services and G1 for the
 at 50\% of the container limit, Tomcat has its default 200 worker threads, and HikariCP its default ten
 connections. Two settings were changed from their defaults after calibration: Tomcat accepts at most 1{,}000
 connections per process, so that an overloaded service queues work in the kernel backlog instead of buffering
-it in its own memory, and keep-alive connections are never closed by the server, because the JDK HTTP client
-does not retry a POST that races with a server-side close.
+it in its own memory, and the server does not close a keep-alive connection after a fixed number of requests
+(only after 75\,s idle), because the JDK HTTP client does not retry a POST that races with a server-side close.
 
 \subsection{Per-layer latency accounting}
 \label{sec:timing}
@@ -133,8 +135,9 @@ network,
 which covers everything between the two processes: the HTTP client and server stacks, kernel networking,
 kube-proxy and, in Config~D, both sidecars. Both terms of~\eqref{eq:net} are differences of timestamps taken
 on one host, so no clock synchronisation is needed. This replaces the span-difference method of our earlier
-protocol, which subtracted timestamps taken on different nodes and depended on NTP or PTP accuracy. Each
-process adds its callees' layers to its own, so the edge process reports
+protocol, which subtracted timestamps taken on different nodes and depended on NTP or PTP accuracy. Remote calls
+within a request are made one after another, never in parallel, so the sum over calls is the time the caller spent
+waiting. Each process adds its callees' layers to its own, so the edge process reports
 $\mathit{tot} = \sum\mathit{app} + \sum\mathit{db} + \sum\mathit{ser} + \sum\mathit{net} + \sum\mathit{oth}$
 over the whole call tree. The load generator's observed latency minus the edge's $\mathit{tot}$ is the
 \emph{edge} layer: the client-to-edge network plus any time a request waits in the edge's accept queue.
@@ -194,10 +197,14 @@ differs. Two load modes answer two different questions~\cite{Schroeder2006}:
 
 \begin{itemize}
 \item \textbf{Open loop, for latency.} Requests arrive at a constant rate regardless of responses, so a slow
-system cannot slow the generator down and latency is measured from each request's scheduled send time; this
-avoids coordinated omission~\cite{Tene2015}. Each rate level runs for \xo{openstep}\,s. A level is
-\emph{saturated} if more than 5\% of requests fail (including 10\,s client timeouts) or if throughput falls
-below 90\% of the offered rate; the sweep for a configuration stops after two consecutive saturated levels.
+system cannot slow the generator down; this avoids coordinated omission~\cite{Tene2015}. Vegeta measures latency
+from the moment it sends a request, not from the request's place in the schedule, so we also report how far sends
+lagged behind the constant-rate schedule. Each rate level runs for \xo{openstep}\,s. A level is \emph{sustained}
+if at most 5\% of requests fail (including 10\,s client timeouts), throughput reaches 90\% of the offered rate and
+p99 is at most 100\,ms; otherwise it is \emph{saturated}. The latency criterion matters: without it, a level 10\%
+beyond capacity passes the throughput test while seconds of queue build up. The runner stops a sweep after two
+consecutive levels with more than 5\% errors or a p99 above 2\,s, so it records levels beyond those the analysis
+counts as sustained.
 \item \textbf{Closed loop, for capacity.} $N$ workers each send the next request as soon as the previous one
 completes, with no think time, for $N \in \{1, 2, 4, \dots, 256\}$ and \xo{closedstep}\,s per level. This is
 the setting in which the USL~\eqref{eq:usl} is defined, so USL fits use closed-loop data only.
@@ -210,6 +217,7 @@ runs with a short open-loop warm-up showed p99 falling as the offered rate rose,
 in progress during the first steps.
 
 \subsection{Procedure}
+\label{sec:procedure}
 
 A \emph{cell} is one configuration in one repetition. Every cell gets a fresh deployment: the namespace is
 deleted and recreated, databases are re-seeded, and all JVMs start cold. Repetitions are therefore independent
@@ -244,8 +252,10 @@ for browse, 400 for checkout). They are computed per workload, and each workload
 its own allocation. This is a demand-proportional heuristic tuned to each workload, not a proven optimum. The
 shares were measured at a rate where the edge service was already slightly throttled, and the floors keep some
 cores on services the workload barely uses. It moves most of the budget to the edge. Under browse, the
-\texttt{catalog} service of~B gets 2.40 cores instead of 1.0 and the \texttt{search} service of~C gets 1.88
-instead of 0.5. Under checkout, \texttt{order} in~B gets 2.14 cores and \texttt{orders} in~C gets 1.44. The
+\texttt{catalog} service of~B gets \xo{alloc/cores/browse/B} cores instead of \xo{alloc/equal/B} and the
+\texttt{search} service of~C gets \xo{alloc/cores/browse/C} instead of \xo{alloc/equal/C}. Under checkout,
+\texttt{order} in~B gets \xo{alloc/cores/checkout/B} cores and \texttt{orders} in~C gets
+\xo{alloc/cores/checkout/C}. The
 monolith has one pod per tier, so its allocation cannot change. It is nevertheless re-measured in the same
 campaign, so that every comparison is with a monolith measured alongside it. This treatment ran in the local
 environment with \xo{prop/reps} repetitions of all four configurations.
@@ -287,32 +297,44 @@ quota, not the nodes, limited scaling. Each configuration ran \xo{hpa/reps} repe
 
 The unit of replication is the cell. Requests within one run are serially dependent, so treating each request as
 an independent observation would overstate precision. Per-step statistics (percentiles, mean layers,
-throughput) are computed within a cell; across repetitions we report the median and, with five or more
-repetitions, a 95\% bootstrap confidence interval of that median (with fewer, the range).
+throughput) are computed within a cell. Across repetitions we report the median and the range (minimum and
+maximum). With five or fewer repetitions a bootstrap interval of the median coincides with that range.
 
 Tail-latency comparisons between a microservice configuration and the monolith use a two-level bootstrap in the
-spirit of Kalibera and Jones~\cite{Kalibera2013}: resample repetitions with replacement, then requests within each
-resampled repetition, recompute the pooled percentile for both configurations, and take the ratio. The
-confidence interval of the p99 ratio is the percentile interval of the bootstrap distribution. For the H1 family
-(three microservice configurations times two workloads) the interval level is Bonferroni-adjusted to
-$1 - 0.05/6$. With few repetitions this procedure is more informative than a rank test on per-repetition
-percentiles, whose smallest attainable two-sided $p$-value with three repetitions per group is $0.1$.
+spirit of Kalibera and Jones~\cite{Kalibera2013}. The first level resamples repetitions with replacement, paired by
+repetition index, because each repetition block ran its configurations close together in time. The second level
+resamples each run's requests in moving blocks of one second of traffic, which keeps the serial dependence within
+a run. Each replicate recomputes the pooled percentile for both configurations and takes their ratio, and the
+interval is the percentile interval of the replicates. For the H1 family (three microservice configurations times
+two workloads) we use 10{,}000 replicates and the Bonferroni-adjusted level $1 - 0.05/6$. Descriptive ratios at
+higher rates use 1{,}000 replicates, and each repetition contributes a contiguous window of at most 5{,}000
+requests.
 
-The USL is fitted by nonlinear least squares (trust-region reflective, $\lambda, \alpha, \beta \ge 0$) to every
-closed-loop measurement of a configuration, one point per repetition and concurrency level. Confidence intervals
-for $\alpha$, $\beta$, $N^\ast$ and the peak throughput $X_{\max}$ come from 1{,}000 bootstrap refits in which, at
-every concurrency level, the measurement of a randomly drawn repetition is used. When $\beta$ is estimated as zero
-the curve has no retrograde region and $N^\ast$ is undefined; $X_{\max}$ is then the asymptote $\lambda/\alpha$.
+Capacity is measured directly. The \emph{peak throughput} of a configuration is the highest median closed-loop
+throughput over the concurrency levels. Its 95\% interval comes from 10{,}000 replicates that resample whole
+repetitions. Alongside it we report an operational bottleneck bound~\cite{Denning1978}: a container at utilisation
+$U_k$ of its CPU limit while the system serves $X$ requests per second saturates at $X/U_k$. The bound is
+therefore $\min_k X/U_k$ over all containers, evaluated at the highest rate the configuration sustained, and the
+minimising container is the predicted bottleneck. The USL is fitted as a secondary description of the
+closed-loop curves. The fit uses nonlinear least squares (trust-region reflective) with
+$0 \le \alpha, \beta \le 1$ on every closed-loop measurement, one point per repetition and concurrency level.
+Intervals come from 1{,}000 refits on whole repetitions drawn with replacement. When $\beta$ is estimated as zero
+the curve has no retrograde region and $N^\ast$ is undefined, and $X_{\max}$ is then the asymptote
+$\lambda/\alpha$. A fit that sits on a bound is reported as such, not interpreted.
 
 We define two crossovers and report them separately, because they need not coincide. The \emph{throughput
-crossover} of configuration $X$ is the smallest concurrency at which its fitted USL curve exceeds the monolith's.
+crossover} of configuration $X$ is the smallest concurrency at which its median throughput exceeds the monolith's.
 The \emph{latency crossover} is the smallest offered rate at which $X$'s median p99 is lower than the monolith's,
 counting a saturated level as infinitely slow.
 
 \subsection{Hypotheses and falsification conditions}
 \label{sec:hypotheses}
 
-The three hypotheses of the protocol are kept, with falsification conditions tied to the procedures above.
+The three hypotheses of the protocol are kept, with falsification conditions tied to the procedures above. The
+conditions were made operational while the testbed was built, before the local campaign. Three analysis rules
+were fixed only after its data had been seen, and we flag them as such. These are the restriction of the H3
+comparison to rates without CFS throttling, its evaluation at each workload's lowest rate, and the p99 criterion
+for sustained levels. The autoscaling condition below was fixed before the autoscaling measurements.
 
 \textbf{H1 (low-load overhead).} At the lowest offered rate of each workload, the monolith has a lower p99
 than every microservice configuration. H1 is falsified if the Bonferroni-adjusted interval of any ratio
@@ -328,7 +350,7 @@ under autoscaling if a decomposed configuration either sustains, in every repeti
 monolith's highest sustained rate, or sustains a rate that the monolith also sustains while requesting less CPU
 than the monolith in every repetition. Otherwise it is falsified.
 
-\textbf{H3 (mesh compounding).} Istio's overhead grows with call-graph depth and exceeds a quarter of end-to-end
+\textbf{H3 (mesh cost and path length).} Istio's overhead grows with the number of remote calls on a request's path and exceeds a quarter of end-to-end
 latency on the six-hop path. With C and D differing only in the mesh, the overhead at a given offered rate is
 $D - C$: per-hop inter-service transit, database round-trip time, and end-to-end latency. The difference isolates
 the mesh only while neither configuration is limited by its CPU quota, so it is computed at the rates at which

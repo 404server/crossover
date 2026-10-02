@@ -1,7 +1,10 @@
 The campaign comprised \xo{cells} cells (\xo{reps} repetitions of each configuration), ran for \xo{hours}\,h,
 and needed no exclusions: no pod restarted and the host was never suspended during a step. All
 \xo{equiv/total} equivalence responses were byte-identical to the monolith's, and the \texttt{calls} field
-confirmed the hop counts of Table~\ref{tab:hops} in every request.
+confirmed the hop counts of Table~\ref{tab:hops} in every request. At the lowest rates the generator's sends lagged
+the constant-rate schedule by up to \xo{lagmax/browse}\,ms (browse) and \xo{lagmax/checkout}\,ms (checkout) at the
+99th percentile, the same order as the latencies being measured. Latency is measured from the actual send, so the
+lag does not enter it, but low-rate arrivals were burstier than a constant rate.
 
 \subsection{Latency at low load (RQ1, H1)}
 \label{sec:res-latency}
@@ -29,13 +32,13 @@ As the offered rate rises, the configurations part ways. The monolith sustained 
 \xo{gridtop/browse} requests per second for browse and \xo{gridtop/checkout} for checkout; from 500 requests per
 second upwards its p99 never exceeded \xo{p99/checkout/A/1800}\,ms. Configuration~B sustained \xo{sustained/browse/B} and \xo{sustained/checkout/B} requests per second
 in every repetition, C \xo{sustained/browse/C} and \xo{sustained/checkout/C}, and D \xo{sustained/browse/D} and
-\xo{sustained/checkout/D}. Before saturation, the decomposed configurations' tails become erratic. At 500
+\xo{sustained/checkout/D}. Near their limits the decomposed configurations' tails become erratic. At 500
 browse requests per second, C's median p99 across repetitions was \xo{p99/browse/C/500}\,ms, but the repetitions
 ranged from \xo{p99lo/browse/C/500} to \xo{p99hi/browse/C/500}\,ms. The edge service, \texttt{search}, was then
 using \xo{hot/browse/C/500/util}\% of its half-core limit on average, and \xo{hot/browse/C/500/thr}\% of its CFS
 periods were throttled. This is the mechanism of Section~\ref{sec:bg-cfs}: well before the limit is reached on
 average, bursts exhaust the quota within a period and the requests that arrive next wait for the following one.
-B shows the same pattern near its own limit (\texttt{catalog} at \xo{hot/browse/B/2200/util}\% with
+B shows the same pattern beyond its sustained rate (\texttt{catalog} at \xo{hot/browse/B/2200/util}\% with
 \xo{hot/browse/B/2200/thr}\% of periods throttled at 2{,}200 requests per second, p99 \xo{p99/browse/B/2200}\,ms).
 The monolith's application container used at most \xo{hot/browse/A/3200/util}\% of its four-core limit in the
 open-loop sweeps and was never throttled.

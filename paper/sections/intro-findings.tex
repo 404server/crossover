@@ -1,8 +1,8 @@
 In a campaign of \xo{cells} fresh deployments on a local Kubernetes cluster, decomposition raised low-load p99
-latency to \xo{ratio/browse/B/50/est}--\xo{ratio/checkout/D/25/est} times the monolith's (H1 supported), most of it
+latency to \xo{h1/min}--\xo{h1/max} times the monolith's (H1 supported), most of it
 inter-service transit rather than serialisation. Under the equal budget the monolith's capacity was several times
 that of every decomposed configuration and no crossover appeared at any load (H2 falsified); the decomposed
 configurations were limited by the CPU quota of their edge service, whose throttling made tail latency erratic
 well before its average utilisation reached the limit. The Istio mesh added a few tenths of a millisecond per
-hop, compounding with depth to \xo{H3/share_deep}\% of latency on a six-hop path, and used more CPU per request than
+hop, adding up to \xo{H3/share_deep}\% of latency on a six-hop path, and used more CPU per request than
 the application itself (H3 supported).

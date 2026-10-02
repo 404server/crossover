@@ -37,6 +37,14 @@ industry survey and benchmarked a monolith and its microservice counterpart loca
 Kubernetes Service with JMeter~\cite{Bjorndal2021}. Faustino et al.\ measured performance at each
 step of a migration from monolith to modular monolith to microservices~\cite{Faustino2024}.
 
+Read together, these studies disagree less than their conclusions suggest. Where both styles run on the same
+hardware, the monolith is faster or equal: in Ueda et al.'s, Al-Debagy and Martinek's and Jatkiewicz and
+Okr\'oj's experiments, and in Blinowski et al.'s single-machine runs. The microservice version comes out ahead
+only when it receives more instances or other resources, as in Berry et al.'s replicated deployments and
+Blinowski et al.'s cloud setup. A comparison under an equal budget is therefore a baseline whose direction is
+expected. What it can add is the size of the gap, where the gap comes from, and whether a different allocation
+or elastic capacity closes it.
+
 Benchmark suites contain some of the same comparison. DeathStarBench includes Java monoliths for
 two of its applications and uses them as baselines, reporting for instance that a mismanaged
 dependency worsens tail latency by $10.4\times$ relative to the monolithic Social
@@ -55,15 +63,35 @@ A second line of work holds the architectural style fixed and varies how finely 
 In a controlled experiment on Train Ticket, Zhao et al.\ found that a fine-grained decomposition
 had 5.2\,ms (14\%) higher response time and used 461\,J (13\%) more energy than a coarse one, and
 that raising the request rate from 40 to 400 requests per second added 41.2\,ms (98\%) to response
-time~\cite{Zhao2025}. Medeiros R\^ego et al.\ deployed Online Boutique at several granularity levels
-with Service Weaver on Amazon EKS and observed that distributing services improves scalability
+time~\cite{Zhao2025}. Ghemawat et al.\ proposed writing an application as a logical monolith whose components are placed in
+one process or in several at deployment time, and reported up to $15\times$ lower latency and $9\times$ lower cost
+than a microservice deployment of the same application with their Service Weaver
+prototype~\cite{Ghemawat2023}. Our testbed uses the same mechanism (one binary, placement chosen per deployment)
+to hold the code constant across configurations. Medeiros R\^ego et al.\ deployed Online Boutique at several
+granularity levels with Service Weaver on Amazon EKS and observed that distributing services improves scalability
 under high load but adds communication overhead~\cite{MedeirosRego2025}. Jayasinghe et al.\ showed
 that decomposition can raise or lower throughput and mean latency depending on the number of calls,
 the service demand, the concurrency and the decomposition strategy~\cite{Jayasinghe2020}. Shadija
 et al.\ deployed the same ASP.NET microservices in one container and in two and measured a latency
 increase below 1\% for a single workflow, while cautioning that nested dependencies could compound
 small delays~\cite{Shadija2017UCC}. Hassan et al.\ mapped the research on the granularity problem
-in microservice transitions~\cite{Hassan2020}.
+in microservice transitions~\cite{Hassan2020}, and Taibi and Lenarduzzi list services that are too small, which
+add communication without adding cohesion, among the bad smells of microservice architectures~\cite{Taibi2018}.
+At the scale of microseconds, which is the scale of our services' business logic, fixed per-call overheads
+dominate~\cite{Barroso2017,Sriraman2018}.
+
+\subsection{Resource management for microservices}
+\label{sec:rw-resources}
+
+How resources are allocated to the services of one application is a research field of its own. Kubernetes'
+Horizontal Pod Autoscaler scales each deployment on a utilisation target~\cite{Nguyen2020}. ATOM sizes
+microservices with a layered queueing model~\cite{Gias2019}, FIRM and Sinan learn which service to scale to meet a
+tail-latency objective~\cite{Qiu2020,Zhang2021Sinan}, and Autopilot sets limits and replica counts for Google's
+production jobs from their usage~\cite{Rzadca2020}. Jeong et al.\ survey autoscaling techniques for cloud-native
+systems~\cite{Jeong2025}. These systems allocate resources within a given decomposition. They do not ask whether
+the decomposition itself pays for its overhead, which is the question the allocation treatments of this study
+address. They also show why the treatments matter: an evenly divided budget is a poor allocation for most
+microservice applications.
 
 \subsection{Service-mesh overhead}
 \label{sec:rw-mesh}
@@ -114,7 +142,10 @@ Instrumentation affects what it measures. N\~ou et al.\ reported that distribute
 OpenTelemetry and Elastic APM reduced throughput by 19\% to 80\% and increased latency by up to
 175\%~\cite{Nou2025}, and Janes et al.\ reviewed 30 open tracing tools, including Jaeger and
 OpenTelemetry~\cite{Janes2023}. This is one reason the testbed propagates per-layer timings in a
-response header instead of exporting a full trace for every request.
+response header instead of exporting a full trace for every request. Estimating network time from timestamps that
+caller and callee take on their own clocks is how client and server spans are related in Dapper-style
+tracing~\cite{Sigelman2010,Kaldor2017}. Our accounting aggregates the same quantities in-band, at the cost of one
+response header per hop.
 
 \subsection{Summary and gaps addressed}
 \label{sec:rw-gaps}
@@ -156,7 +187,7 @@ Zhao et al.$^{\dagger}$ \cite{Zhao2025} & Fine vs.\ coarse microservices (Train 
 This study & Monolith; coarse (4 services); fine (8); fine + Istio & Kubernetes: kind on one host;
   Amazon EKS (Graviton); static and autoscaled CPU & Vegeta constant rate (open) for latency;
   $N$-worker sweeps (closed) for capacity & p50, p95, p99, p99.9 & Yes: app, db, ser, net,
-  framework, edge & 12 rate levels, 9 concurrency levels \\
+  framework, edge & 13--14 rate levels, 9 concurrency levels \\
 \bottomrule
 \end{tabular}
 \end{table*}
@@ -168,7 +199,9 @@ levels. Second, most studies report throughput or mean response time, and tail p
 Section~\ref{sec:bg-costs} identifies as the quantity distribution affects most, are rarely given.
 Third, we are not aware of a study that decomposes per-request latency into layers (application,
 database, serialisation, network, framework) across configurations built from identical code,
-which is what is needed to say where the extra time of a distributed configuration goes. Fourth,
+which is what is needed to say where the extra time of a distributed configuration goes. Fleet-scale studies
+count serialisation and RPC processing among the costs every request pays~\cite{Kanev2015,Seemakhupt2023}, but
+they compare services with each other, not one application in different topologies. Fourth,
 the resources given to each configuration are rarely held equal or even reported in enough detail
 to judge whether a difference comes from the architecture or from the allocation; Berry et al.'s
 dependence on the replicated gateway~\cite{Berry2024} and Blinowski et al.'s cloud results, where

@@ -28,8 +28,8 @@
 \end{groupplot}
 \end{tikzpicture}
 \caption{Tail latency under open-loop load: median p99 across \xo{reps} repetitions, bars spanning the
-repetitions' spread. A line ends where the configuration saturated (more than 5\% errors or throughput below
-90\% of the offered rate).}
+repetitions' spread. A line ends where the configuration saturated (more than 5\% errors, throughput below 90\% of the offered rate, or
+p99 above 100\,ms).}
 \label{fig:open}
 \end{figure}
 
@@ -58,32 +58,50 @@ Workload & Rate (req/s) & Configuration & p99 ratio & Interval \\
     xtick={1,4,16,64,256}, xticklabels={1,4,16,64,256}]
 \nextgroupplot[title={Browse}, legend columns=4, legend style={at={(1.1,1.2)}, anchor=south}]
 \foreach \c/\m in {A/*, B/square*, C/triangle*, D/diamond*} {
-  \edef\tmp{\noexpand\addplot[xo\c, only marks, mark=\m, mark size=1.5pt, forget plot] table[x=n, y=\c x] {\gen{closed-browse.csv}};}\tmp
+  \edef\tmp{\noexpand\addplot[xo\c, only marks, mark=\m, mark size=1.5pt, forget plot, error bars/.cd, y dir=both, y explicit] table[x=n, y=\c x, y error plus expr=\noexpand\thisrow{\c hi}-\noexpand\thisrow{\c x}, y error minus expr=\noexpand\thisrow{\c x}-\noexpand\thisrow{\c lo}] {\gen{closed-browse.csv}};}\tmp
   \edef\tmp{\noexpand\addplot[xo\c, no marks] table[x=n, y=\c fit] {\gen{usl-browse.csv}};}\tmp
 }
 \legend{A (monolith), B (4 services), C (8 services), D (8 + Istio)}
 \nextgroupplot[title={Checkout}]
 \foreach \c/\m in {A/*, B/square*, C/triangle*, D/diamond*} {
-  \edef\tmp{\noexpand\addplot[xo\c, only marks, mark=\m, mark size=1.5pt, forget plot] table[x=n, y=\c x] {\gen{closed-checkout.csv}};}\tmp
+  \edef\tmp{\noexpand\addplot[xo\c, only marks, mark=\m, mark size=1.5pt, forget plot, error bars/.cd, y dir=both, y explicit] table[x=n, y=\c x, y error plus expr=\noexpand\thisrow{\c hi}-\noexpand\thisrow{\c x}, y error minus expr=\noexpand\thisrow{\c x}-\noexpand\thisrow{\c lo}] {\gen{closed-checkout.csv}};}\tmp
   \edef\tmp{\noexpand\addplot[xo\c, no marks] table[x=n, y=\c fit] {\gen{usl-checkout.csv}};}\tmp
 }
 \end{groupplot}
 \end{tikzpicture}
-\caption{Closed-loop throughput (marks: median across repetitions) and fitted Universal Scalability Law
-curves (lines).}
+\caption{Closed-loop throughput (marks: median across \xo{reps} repetitions, bars spanning their range) and
+fitted Universal Scalability Law curves (lines). Both axes are logarithmic.}
 \label{fig:closed}
 \end{figure}
 
 \begin{table}[t]
-\caption{USL fits to the closed-loop measurements. Brackets: 95\% bootstrap intervals. $\beta = 0$ means the
-fit sits at its bound, so the curve has no retrograde region and $N^\ast$ is undefined; $X_{\max}$ is then
-$\lambda/\alpha$. The last column is $X_{\max}$ relative to the monolith.}
+\caption{Capacity under the equal budget. Peak: highest median closed-loop throughput (requests/s) over the
+concurrency levels, at $N$ clients, with a 95\% interval from resampling repetitions. Bound: operational bottleneck
+bound $\min_k X/U_k$ at the highest sustained open-loop rate, with the container that attains it. Budget used: CPU
+of all application and database containers at 64 clients, as a share of the 6-core budget.}
+\label{tab:capacity}
+\centering\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lllrrlr@{}}
+\toprule
+Workload & Configuration & Peak [95\% interval] & $N$ & vs.\ A & Bound (container) & Budget used \\
+\midrule
+\xoinput{\gen{tab-capacity.tex}}
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\caption{USL fits to the closed-loop measurements, a secondary description of the curves in
+Figure~\ref{fig:closed}. Brackets: 95\% intervals from refits on resampled repetitions. The fit constrains
+$0 \le \alpha, \beta \le 1$; $\beta = 0$ means the fit sits at that bound, so the curve has no retrograde region,
+$N^\ast$ is undefined and $X_{\max}$ is $\lambda/\alpha$.}
 \label{tab:usl}
 \centering\scriptsize
 \setlength{\tabcolsep}{3pt}
-\begin{tabular}{@{}llrllrrrr@{}}
+\begin{tabular}{@{}llrllrrr@{}}
 \toprule
-Workload & Configuration & $\lambda$ & $\alpha$ & $\beta$ & $N^\ast$ & $X_{\max}$ & $R^2_{\mathrm{adj}}$ & vs.\ A \\
+Workload & Configuration & $\lambda$ & $\alpha$ & $\beta$ & $N^\ast$ & $X_{\max}$ & $R^2_{\mathrm{adj}}$ \\
 \midrule
 \xoinput{\gen{tab-usl.tex}}
 \bottomrule
@@ -137,8 +155,7 @@ Workload & Configuration & app & db & mesh & (GiB) & service & util. & throttled
 \input{sections/results-text-4}
 
 \begin{table}[t]
-\caption{Cost of the Istio mesh, measured as D minus C at equal offered rate (medians across repetitions;
-brackets: 95\% bootstrap interval of the per-hop difference). Share is the part of D's mean end-to-end latency
+\caption{Cost of the Istio mesh, measured as D minus C at equal offered rate (medians across repetitions; brackets: 95\% bootstrap interval of the difference of medians, per hop). Share is the part of D's mean end-to-end latency
 that the difference explains.}
 \label{tab:mesh}
 \centering\small

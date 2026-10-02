@@ -2,35 +2,45 @@
 \label{sec:res-capacity}
 
 Figure~\ref{fig:closed} shows closed-loop throughput as a function of the number of concurrent clients, and
-Table~\ref{tab:usl} the fitted USL parameters. The monolith reached a peak of \xo{usl/browse/A/xmax} browse and
-\xo{usl/checkout/A/xmax} checkout requests per second. The decomposed configurations peaked far lower: B at
-\xo{xmaxratio/browse/B} (browse) and \xo{xmaxratio/checkout/B} (checkout) of the monolith's capacity, C at
-\xo{xmaxratio/browse/C} and \xo{xmaxratio/checkout/C}, and D at \xo{xmaxratio/browse/D} and
-\xo{xmaxratio/checkout/D}. No decomposed configuration matched the monolith at any measured concurrency level in
+Table~\ref{tab:capacity} the measured peaks. The monolith peaked at \xo{peak/browse/A} browse and
+\xo{peak/checkout/A} checkout requests per second. The decomposed configurations peaked far lower: B at
+\xo{peakpct/browse/B}\% (browse) and \xo{peakpct/checkout/B}\% (checkout) of the monolith's peak, C at
+\xo{peakpct/browse/C}\% and \xo{peakpct/checkout/C}\%, and D at \xo{peakpct/browse/D}\% and
+\xo{peakpct/checkout/D}\%. No decomposed configuration matched the monolith at any measured concurrency level in
 either workload, so the throughput crossover does not exist within the tested range and \textbf{H2 is falsified} by
-its first condition. Its second condition is met only formally: the fits for B and C put $\beta$ at its lower
-bound of zero, which is lower than the monolith's \xo{usl/browse/A/beta} (browse), but for the reason discussed
-next rather than because decomposition removed a coherency cost.
+its first condition. There was no latency crossover either: at no offered rate was a decomposed configuration's
+median p99 below the monolith's. The second condition of H2, on $\beta$, is uninformative here, because the fits
+for B and C sit at the bound $\beta = 0$ (Table~\ref{tab:usl}).
 
-The cgroup counters show what limits each configuration. At 64 clients the monolith's database container used
+The cgroup counters show what limits each configuration, and the bottleneck bound of Table~\ref{tab:capacity}
+names the same container in every case. At 64 clients the monolith's database container used
 \xo{chot/browse/A/64/util}\% of its two-core limit and was throttled in \xo{chot/browse/A/64/thr}\% of its periods,
 while the application container used \xo{chot/browse/A/64/apputil}\% of its four cores (checkout:
 \xo{chot/checkout/A/64/util}\% and \xo{chot/checkout/A/64/apputil}\%). The monolith is therefore bound by its
-database tier, and its fitted $\beta>0$ and $N^\ast$ of \xo{usl/browse/A/nstar} (browse) and \xo{usl/checkout/A/nstar}
-(checkout) describe a saturated database rather than application code. In every decomposed configuration the
-limit is instead the CPU quota of the edge service: \texttt{\xo{chot/browse/B/64/appname}} in~B at
-\xo{chot/browse/B/64/apputil}\% of its single core and \texttt{\xo{chot/browse/C/64/appname}} in~C at
-\xo{chot/browse/C/64/apputil}\% of its half core, while their databases stayed below saturation.
-The edge service does the most work per request: it parses its callees' JSON responses, encodes the client's
-response, and drives every outbound call, so it is the first to exhaust an equal share of the budget.
+database tier. In every decomposed configuration the limit is instead the CPU quota of the edge service:
+\texttt{\xo{chot/browse/B/64/appname}} in~B at \xo{chot/browse/B/64/apputil}\% of its single core and
+\texttt{\xo{chot/browse/C/64/appname}} in~C at \xo{chot/browse/C/64/apputil}\% of its half core, while their
+databases stayed below saturation. The edge service does the most work per request: it parses its callees' JSON
+responses, encodes the client's response, and drives every outbound call, so it is the first to exhaust an equal
+share of the budget. The rest of the budget then goes unused. At 64 clients the monolith's containers used
+\xo{budgetuse/browse/A}\% of the six cores on browse, B's \xo{budgetuse/browse/B}\%, C's \xo{budgetuse/browse/C}\%
+and D's \xo{budgetuse/browse/D}\%. The bound assumes that CPU per request does not change with load, so it is an
+approximation. It is furthest from the measured peak for the monolith's checkout (\xo{bound/checkout/A} against
+\xo{peak/checkout/A} requests per second), whose database needs more CPU per request near saturation than at the
+open-loop rate where the bound is evaluated.
 
-Configuration~C is the extreme case. Its USL fit has $\alpha = \xo{usl/browse/C/alpha}$ and the throughput curve is
-flat from a single client onwards (\xo{x/browse/C/1} requests per second at $N=1$, \xo{x/browse/C/256} at $N=256$).
-With a single client, \texttt{search} already used \xo{chot/browse/C/1/apputil}\% of its half-core limit and was
-throttled in \xo{chot/browse/C/1/thr}\% of its CFS periods; additional clients only queue. In USL terms the configuration is completely contention-bound, and the
-contended resource is a CPU quota. B and D have $\alpha$ between \xo{usl/checkout/D/alpha} and \xo{usl/browse/B/alpha}. D's throughput with one
-client is lower than C's because of the sidecars' added latency (\xo{x/browse/D/1} against \xo{x/browse/C/1}
-requests per second), but its peak is slightly higher (\xo{usl/browse/D/xmax} against \xo{usl/browse/C/xmax}). Two
-measured effects explain this: the sidecars run on CPU outside the application budget, and D's edge application
-container needed less CPU per request than C's (\xo{hot/browse/D/500/util}\% against \xo{hot/browse/C/500/util}\%
-of the same limit at 500 requests per second).
+Configuration~C is the extreme case. Its throughput was close to its peak with a single client
+(\xo{x/browse/C/1} requests per second at $N=1$ against a peak of \xo{peak/browse/C} at $N=\xo{peakn/browse/C}$),
+dipped at moderate concurrency and recovered at the highest. With a single client, \texttt{search} already used
+\xo{chot/browse/C/1/apputil}\% of its half-core limit and was throttled in \xo{chot/browse/C/1/thr}\% of its CFS
+periods; additional clients only queue. D's throughput with one client is lower than C's because of the
+sidecars' added latency (\xo{x/browse/D/1} against \xo{x/browse/C/1} requests per second). Its peak was slightly higher (\xo{peak/browse/D} against \xo{peak/browse/C}), but the two intervals overlap
+([\xo{peaklo/browse/D}, \xo{peakhi/browse/D}] and [\xo{peaklo/browse/C}, \xo{peakhi/browse/C}]). D's edge application container needed less CPU per request than C's (\xo{hot/browse/D/500/util}\% against
+\xo{hot/browse/C/500/util}\% of the same limit at 500 requests per second), consistent with part of its network
+processing being charged to the sidecar (Section~\ref{sec:threats}).
+
+As a description of the curves, the USL fits the monolith well ($R^2_{\mathrm{adj}}$ of \xo{usl/browse/A/r2adj}
+and \xo{usl/checkout/A/r2adj}) and B and D only moderately (\xo{usl/browse/D/r2adj}--\xo{usl/checkout/D/r2adj}).
+Their throughput climbs to the quota within a few clients, dips and recovers, a shape the model cannot represent.
+For C the fit sits on its bounds and carries no information. For the same reason the capacity figures in this
+article are measured peaks, not the fitted $X_{\max}$.
