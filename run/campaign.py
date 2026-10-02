@@ -63,14 +63,17 @@ def targets(cfg, workload, n=2000, seed=1):
     return "\n".join(out) + "\n"
 
 
-def attack(tfile, duration, out=None, rate=None, workers=None, bodies=False):
+def attack(tfile, duration, out=None, rate=None, workers=None, bodies=False, settle=0):
     """rate -> open loop (constant arrivals, no coordinated omission); workers -> closed loop.
     One exec per step: the report goes to stderr, the encoded results (if kept) to stdout, which
-    matters when the cluster is a long round trip away."""
-    flags = f"-targets={tfile} -duration={duration}s -timeout=10s"
+    matters when the cluster is a long round trip away. settle: seconds of the same load first,
+    unrecorded and in the same exec, so the recorded window follows without a gap."""
+    flags = f"-targets={tfile} -timeout=10s"
     flags += f" -rate={rate}" if rate else f" -rate=0 -workers={workers} -max-workers={workers}"
     flags += "" if bodies else " -max-body=0"
-    script = f"vegeta attack {flags} > /work/r.bin && vegeta report -type=json < /work/r.bin >&2"
+    script = f"vegeta attack {flags} -duration={duration}s > /work/r.bin && vegeta report -type=json < /work/r.bin >&2"
+    if settle:
+        script = f"vegeta attack {flags} -duration={settle}s > /dev/null && " + script
     if out:
         script += " && vegeta encode --to json < /work/r.bin | gzip -9 > /work/r.gz && wc -c < /work/r.gz >&2"
     r = subprocess.run(lg(script), capture_output=True)
@@ -197,7 +200,8 @@ def wait_api(limit=6 * 3600):
 
 
 def manifests(cfg, a, shares=None, hpa=0):
-    return gen.manifests(cfg, a.image, a.app_cpu, a.app_mem, a.db_cpu, a.db_mem, hpa, a.mem_floor, shares, cpu_cap=a.cpu_cap)
+    return gen.manifests(cfg, a.image, a.app_cpu, a.app_mem, a.db_cpu, a.db_mem, hpa, a.mem_floor, shares, cpu_cap=a.cpu_cap,
+                         work_us=a.work_us)
 
 
 def deploy(cfg, a, shares=None):
@@ -225,8 +229,11 @@ def scaling_state():
 
 def ramp(d, cfg, wl, tfile, a, shares):
     """Autoscaling treatment: switch the HPAs on after the warm-up, then raise the open-loop rate in long
-    steps, sampling replicas every 10 s. CPU deltas run from one step's end to the next, so replicas
-    created during a step are counted from their first second."""
+    levels, sampling replicas every 10 s. Each level runs ramp_step seconds; only its last ramp_window
+    seconds are recorded, after the autoscaler has had time to react. A level fails if, in that window,
+    more than 5% of requests fail, throughput is below 90% of the rate or p99 exceeds the SLO; the ramp
+    stops after two failed levels. CPU deltas run from one level's end to the next, so replicas created
+    during a level are counted from their first second."""
     hpas = [i for i in manifests(cfg, a, shares, a.hpa)["items"] if i["kind"] == "HorizontalPodAutoscaler"]
     kube("apply", "-f", "-", stdin=json.dumps({"apiVersion": "v1", "kind": "List", "items": hpas}))
     time.sleep(30)  # let the autoscalers read their first metrics with the system idle
@@ -248,7 +255,7 @@ def ramp(d, cfg, wl, tfile, a, shares):
         th = threading.Thread(target=sample, daemon=True)
         th.start()
         wall0, up0 = time.time(), time.clock_gettime(time.CLOCK_UPTIME_RAW)
-        rep_ = attack(tfile, a.ramp_step, d / wl / "ramp" / f"{r}.json.gz", rate=r)
+        rep_ = attack(tfile, a.ramp_window, d / wl / "ramp" / f"{r}.json.gz", rate=r, settle=a.ramp_step - a.ramp_window)
         slept = (time.time() - wall0) - (time.clock_gettime(time.CLOCK_UPTIME_RAW) - up0)
         stop.set()
         th.join()
@@ -269,7 +276,8 @@ def ramp(d, cfg, wl, tfile, a, shares):
         p99 = rep_["latencies"]["99th"] / 1e6
         log(f"  {wl} ramp {r:>5}/s  ok={rep_['success']:.3f}  p99={p99:8.1f} ms  replicas={ {k: v[0] for k, v in last.get('deploy', {}).items()} }"
             f"  quota={last.get('quota', {}).get('used')}")
-        saturated = saturated + 1 if rep_["success"] < 0.95 or p99 > 2000 else 0
+        failed = rep_["success"] < 0.95 or rep_["throughput"] < 0.9 * r or p99 > a.slo_ms
+        saturated = saturated + 1 if failed else 0
         if saturated >= 2:
             break
 
@@ -350,11 +358,14 @@ if __name__ == "__main__":
     p.add_argument("--db-mem", type=int, default=2048)
     p.add_argument("--mem-floor", type=int, default=1024)
     p.add_argument("--hpa", type=int, default=0)
+    p.add_argument("--work-us", type=int, default=0, help="synthetic CPU work per module operation (needs image >= 1.1)")
     p.add_argument("--alloc", type=pathlib.Path, help="JSON from analysis/alloc.py: demand-proportional CPU shares")
     p.add_argument("--ramp", action="store_true", help="autoscaling treatment: HPA on, long open-loop steps")
     p.add_argument("--ramp-step", type=int, default=180, help="seconds per ramp level")
-    p.add_argument("--browse-ramp", type=ints, default=ints("500,1000,1500,2000,3000,4000,5000,6000,8000"))
-    p.add_argument("--checkout-ramp", type=ints, default=ints("200,400,600,800,1200,1600,2000,2400"))
+    p.add_argument("--ramp-window", type=int, default=60, help="recorded seconds at the end of each ramp level")
+    p.add_argument("--slo-ms", type=float, default=100, help="p99 target that a sustained ramp level must meet")
+    p.add_argument("--browse-ramp", type=ints, default=ints("500,700,1000,1400,2000,2800,4000,5600,8000,11000,16000"))
+    p.add_argument("--checkout-ramp", type=ints, default=ints("200,300,400,600,800,1100,1600,2200,3200,4500,6400"))
     p.add_argument("--cpu-cap", type=int, help="namespace CPU quota (millicores); in ramp mode default 3x app + db budget")
     a = p.parse_args()
     a.ramp_rates = {"browse": a.browse_ramp, "checkout": a.checkout_ramp}

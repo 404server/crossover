@@ -66,10 +66,11 @@ def split(total, n, share=None, floor=0):
 
 
 def manifests(cfg, image, app_cpu, app_mem, db_cpu, db_mem, hpa=0, mem_floor=1024, shares=None, app_floor=150, db_floor=100,
-              cpu_cap=None):
+              cpu_cap=None, work_us=0):
     """shares: {"app": {service: fraction}, "db": {service: fraction}} for demand-proportional CPU; None = equal split.
     cpu_cap: millicores the whole namespace may request (ResourceQuota). With hpa it is the shared elastic
-    ceiling: the autoscaler may add replicas until the configuration's pods together hit the cap."""
+    ceiling: the autoscaler may add replicas until the configuration's pods together hit the cap.
+    work_us: synthetic CPU work per module operation (bench WORK_US), to vary the service demand."""
     svcs = TOPOLOGY[cfg]
     n = len(svcs)
     share = lambda tier, svc: shares[tier].get(svc, 0.0) if shares else None
@@ -82,6 +83,7 @@ def manifests(cfg, image, app_cpu, app_mem, db_cpu, db_mem, hpa=0, mem_floor=102
     for s, mods in svcs.items():
         env = [{"name": "SERVICE_MODULES", "value": ",".join(mods)},
                {"name": "DB_URL", "value": f"jdbc:postgresql://{s}-db:5432/crossover"}]
+        env += [{"name": "WORK_US", "value": str(work_us)}] if work_us else []
         env += [{"name": f"URL_{m}", "value": f"http://{host(cfg, m)}:8080"} for m in MODULES if m not in mods]
         items.append(deployment(s, NS, "app", {"containers": [{
             "name": "app", "image": image, "imagePullPolicy": "IfNotPresent", "env": env,

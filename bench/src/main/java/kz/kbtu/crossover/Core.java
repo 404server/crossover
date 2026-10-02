@@ -1,5 +1,9 @@
 package kz.kbtu.crossover;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadMXBean;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -50,10 +54,29 @@ public final class Core {
 
         <T> T pick(Class<T> type, Set<String> hosted, Function<Class<?>, String> url, Supplier<T> impl) {
             if (!hosted.contains(type.getSimpleName())) return Rpc.stub(type, url.apply(type));
-            T t = impl.get();
+            T t = WORK_NS > 0 ? withWork(type, impl.get()) : impl.get();
             local.put(type.getSimpleName(), t);
             return t;
         }
+    }
+
+    /** Synthetic service demand: WORK_US microseconds of CPU in every module operation, wherever it is hosted. */
+    static final long WORK_NS = 1000L * Long.parseLong(System.getenv().getOrDefault("WORK_US", "0"));
+    static final ThreadMXBean THREADS = ManagementFactory.getThreadMXBean();
+
+    @SuppressWarnings("unchecked")
+    static <T> T withWork(Class<T> type, T target) {
+        return (T) Proxy.newProxyInstance(type.getClassLoader(), new Class<?>[] {type}, (proxy, method, args) -> {
+            burn(WORK_NS);
+            try { return method.invoke(target, args); }
+            catch (InvocationTargetException e) { throw e.getCause(); }
+        });
+    }
+
+    /** Spins until this thread has used ns of CPU time, so time spent throttled or descheduled does not count. */
+    static void burn(long ns) {
+        long end = THREADS.getCurrentThreadCpuTime() + ns;
+        while (THREADS.getCurrentThreadCpuTime() < end) Thread.onSpinWait();
     }
 
     static Modules wire(Set<String> hosted, JdbcTemplate db, Function<Class<?>, String> url) {
