@@ -20,6 +20,7 @@ import random
 import shutil
 import subprocess
 import sys
+import threading
 import time
 
 import gen
@@ -160,10 +161,82 @@ def recover(tfile, tries=30):
     raise RuntimeError("system under test did not recover from overload")
 
 
+def manifests(cfg, a, shares=None, hpa=0):
+    return gen.manifests(cfg, a.image, a.app_cpu, a.app_mem, a.db_cpu, a.db_mem, hpa, a.mem_floor, shares, cpu_cap=a.cpu_cap)
+
+
 def deploy(cfg, a, shares=None):
     kube("delete", "ns", gen.NS, "--ignore-not-found", "--wait=true", "--timeout=600s")
-    kube("apply", "-f", "-", stdin=json.dumps(gen.manifests(cfg, a.image, a.app_cpu, a.app_mem, a.db_cpu, a.db_mem, a.hpa, a.mem_floor, shares)))
+    # in ramp mode the autoscalers are added only after the warm-up (see ramp())
+    kube("apply", "-f", "-", stdin=json.dumps(manifests(cfg, a, shares, 0 if a.ramp else a.hpa)))
     kube("-n", gen.NS, "wait", "--for=condition=Available", "deploy", "--all", "--timeout=900s")
+
+
+def scaling_state():
+    """Replicas, autoscaler view and quota use of the system under test, in one API call."""
+    items = json.loads(kube("get", "deploy,hpa,resourcequota", "-n", gen.NS, "-o", "json"))["items"]
+    out = {"deploy": {}, "hpa": {}, "quota": {}}
+    for i in items:
+        name = i["metadata"]["name"]
+        if i["kind"] == "Deployment" and i["metadata"]["labels"].get("tier") == "app":
+            out["deploy"][name] = [i["spec"].get("replicas", 0), i["status"].get("readyReplicas", 0)]
+        elif i["kind"] == "HorizontalPodAutoscaler":
+            m = (i["status"].get("currentMetrics") or [{}])[0].get("resource", {}).get("current", {})
+            out["hpa"][name] = [i["status"].get("desiredReplicas"), m.get("averageUtilization")]
+        elif i["kind"] == "ResourceQuota":
+            out["quota"] = {"used": i["status"].get("used", {}).get("requests.cpu"), "hard": i["status"].get("hard", {}).get("requests.cpu")}
+    return out
+
+
+def ramp(d, cfg, wl, tfile, a, shares):
+    """Autoscaling treatment: switch the HPAs on after the warm-up, then raise the open-loop rate in long
+    steps, sampling replicas every 10 s. CPU deltas run from one step's end to the next, so replicas
+    created during a step are counted from their first second."""
+    hpas = [i for i in manifests(cfg, a, shares, a.hpa)["items"] if i["kind"] == "HorizontalPodAutoscaler"]
+    kube("apply", "-f", "-", stdin=json.dumps({"apiVersion": "v1", "kind": "List", "items": hpas}))
+    time.sleep(30)  # let the autoscalers read their first metrics with the system idle
+    prev_pods = sut_pods()
+    prev_cg, prev_rs = cgroup_cpu(prev_pods), restarts(prev_pods)
+    saturated = 0
+    for r in a.ramp_rates[wl]:
+        step = f"{wl}/ramp/{r}"
+        samples, stop = [], threading.Event()
+
+        def sample():
+            while not stop.is_set():
+                try:
+                    samples.append({"t": time.time(), **scaling_state()})
+                except RuntimeError:
+                    pass
+                stop.wait(10)
+
+        th = threading.Thread(target=sample, daemon=True)
+        th.start()
+        wall0, up0 = time.time(), time.clock_gettime(time.CLOCK_UPTIME_RAW)
+        rep_ = attack(tfile, a.ramp_step, d / wl / "ramp" / f"{r}.json.gz", rate=r)
+        slept = (time.time() - wall0) - (time.clock_gettime(time.CLOCK_UPTIME_RAW) - up0)
+        stop.set()
+        th.join()
+        pods = sut_pods()
+        cg, rs = cgroup_cpu(pods), restarts(pods)
+        with open(d / "cgroup.jsonl", "a") as f:
+            f.write(json.dumps({"step": step, "delta": {k: {m: v - prev_cg.get(k, {}).get(m, 0) for m, v in cg[k].items()} for k in cg}}) + "\n")
+        with open(d / "scaling.jsonl", "a") as f:
+            f.write(json.dumps({"step": step, "t0": wall0, "samples": samples}) + "\n")
+        restarted = [k for k in rs if k in prev_rs and rs[k] != prev_rs[k]]
+        if restarted or slept > 5:
+            log(f"  !! incident during {step}: restarted={restarted} slept={slept:.0f}s")
+            with open(d / "incidents.jsonl", "a") as f:
+                f.write(json.dumps({"step": step, "t": time.time(), "restarted": restarted, "slept_s": slept}) + "\n")
+        prev_cg, prev_rs = cg, rs
+        top(d, step)
+        last = samples[-1] if samples else {}
+        p99 = rep_["latencies"]["99th"] / 1e6
+        log(f"  {wl} ramp {r:>5}/s  ok={rep_['success']:.3f}  p99={p99:8.1f} ms  replicas={ {k: v[0] for k, v in last.get('deploy', {}).items()} }"
+            f"  quota={last.get('quota', {}).get('used')}")
+        saturated = saturated + 1 if rep_["success"] < 0.95 or p99 > 2000 else 0
+        if saturated >= 2:
+            break
 
 
 def cell(rep, cfg, a, out):
@@ -190,6 +263,9 @@ def cell(rep, cfg, a, out):
         # thousands of requests (JIT, pools, caches) without the overload an open-loop warm-up risks.
         log(f"  {wl}: warm-up {a.warmup}s, closed loop N={a.warm_workers}")
         attack(tfile, a.warmup, workers=a.warm_workers)
+        if a.ramp:
+            ramp(d, cfg, wl, tfile, a, shares and shares[wl])
+            continue
         saturated = 0
         for r in a.rates[wl]:
             rep_ = guarded(d, f"{wl}/open/{r}", lambda: attack(tfile, a.open_step, d / wl / "open" / f"{r}.json.gz", rate=r))
@@ -240,7 +316,17 @@ if __name__ == "__main__":
     p.add_argument("--mem-floor", type=int, default=1024)
     p.add_argument("--hpa", type=int, default=0)
     p.add_argument("--alloc", type=pathlib.Path, help="JSON from analysis/alloc.py: demand-proportional CPU shares")
+    p.add_argument("--ramp", action="store_true", help="autoscaling treatment: HPA on, long open-loop steps")
+    p.add_argument("--ramp-step", type=int, default=180, help="seconds per ramp level")
+    p.add_argument("--browse-ramp", type=ints, default=ints("500,1000,1500,2000,3000,4000,5000,6000,8000"))
+    p.add_argument("--checkout-ramp", type=ints, default=ints("200,400,600,800,1200,1600,2000,2400"))
+    p.add_argument("--cpu-cap", type=int, help="namespace CPU quota (millicores); in ramp mode default 3x app + db budget")
     a = p.parse_args()
+    a.ramp_rates = {"browse": a.browse_ramp, "checkout": a.checkout_ramp}
+    if a.ramp and a.cpu_cap is None:
+        a.cpu_cap = 3 * a.app_cpu + a.db_cpu  # the same elastic ceiling for every configuration
+    if a.ramp and not a.hpa:
+        p.error("--ramp needs --hpa MAX_REPLICAS")
     a.alloc_map = json.loads(a.alloc.read_text())["shares"] if a.alloc else {}
     a.configs, a.workloads = a.configs.split(","), a.workloads.split(",")
     a.rates = {"browse": a.browse_rates, "checkout": a.checkout_rates}

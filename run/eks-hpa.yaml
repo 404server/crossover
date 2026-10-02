@@ -1,0 +1,15 @@
+# Extra capacity for the autoscaling treatment: two more 8-core Graviton nodes for the system under
+# test, so the Horizontal Pod Autoscaler has room up to the namespace CPU cap. Added to the running
+# cluster with `eksctl create nodegroup -f run/eks-hpa.yaml`; removed with the cluster.
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+metadata:
+  name: crossover
+  region: ap-southeast-2
+managedNodeGroups:
+  - name: sut-hpa
+    instanceType: c7g.2xlarge
+    desiredCapacity: 2
+    availabilityZones: [ap-southeast-2a]
+    labels: {crossover/role: sut}
+    volumeSize: 30

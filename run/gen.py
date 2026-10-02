@@ -65,14 +65,20 @@ def split(total, n, share=None, floor=0):
     return total // n if share is None else int(floor + (total - n * floor) * share)
 
 
-def manifests(cfg, image, app_cpu, app_mem, db_cpu, db_mem, hpa=0, mem_floor=1024, shares=None, app_floor=150, db_floor=100):
-    """shares: {"app": {service: fraction}, "db": {service: fraction}} for demand-proportional CPU; None = equal split."""
+def manifests(cfg, image, app_cpu, app_mem, db_cpu, db_mem, hpa=0, mem_floor=1024, shares=None, app_floor=150, db_floor=100,
+              cpu_cap=None):
+    """shares: {"app": {service: fraction}, "db": {service: fraction}} for demand-proportional CPU; None = equal split.
+    cpu_cap: millicores the whole namespace may request (ResourceQuota). With hpa it is the shared elastic
+    ceiling: the autoscaler may add replicas until the configuration's pods together hit the cap."""
     svcs = TOPOLOGY[cfg]
     n = len(svcs)
     share = lambda tier, svc: shares[tier].get(svc, 0.0) if shares else None
     mesh = MESH if cfg == "D" else None
     ns_labels = {"istio-injection": "enabled"} if cfg == "D" else {}
     items = [{"apiVersion": "v1", "kind": "Namespace", "metadata": {"name": NS, "labels": {"crossover/config": cfg, **ns_labels}}}]
+    if cpu_cap:
+        items.append({"apiVersion": "v1", "kind": "ResourceQuota", "metadata": {"name": "cpu-cap", "namespace": NS},
+                      "spec": {"hard": {"requests.cpu": f"{cpu_cap}m"}}})
     for s, mods in svcs.items():
         env = [{"name": "SERVICE_MODULES", "value": ",".join(mods)},
                {"name": "DB_URL", "value": f"jdbc:postgresql://{s}-db:5432/crossover"}]
@@ -119,6 +125,7 @@ if __name__ == "__main__":
     p.add_argument("--db-mem", type=int, default=2048)
     p.add_argument("--mem-floor", type=int, default=1024, help="minimum MiB per application pod")
     p.add_argument("--hpa", type=int, default=0, help="enable CPU-based HPA with this maxReplicas per service")
+    p.add_argument("--cpu-cap", type=int, help="namespace CPU quota in millicores")
     a = p.parse_args()
-    out = loadgen(a.loadgen_image) if a.config == "loadgen" else manifests(a.config, a.image, a.app_cpu, a.app_mem, a.db_cpu, a.db_mem, a.hpa, a.mem_floor)
+    out = loadgen(a.loadgen_image) if a.config == "loadgen" else manifests(a.config, a.image, a.app_cpu, a.app_mem, a.db_cpu, a.db_mem, a.hpa, a.mem_floor, cpu_cap=a.cpu_cap)
     print(json.dumps(out, indent=1))
