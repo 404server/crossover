@@ -1,0 +1,9 @@
+Browse & A (monolith) & 11{,}041 & 10{,}781 & -- & -- & -- & \texttt{mono-db} 100\% & \texttt{mono-db} 100\% \\
+ & B (4 services) & 2{,}238 & 6{,}897 & 0.203 & 0.640 & none & \texttt{catalog} 99\% & \texttt{catalog} 100\% \\
+ & C (8 services) & 688 & 3{,}468 & 0.0623 & 0.322 & none & \texttt{search} 98\% & \texttt{search} 99\% \\
+ & D (8 + Istio) & 790 & 2{,}941 & 0.0715 & 0.273 & none & \texttt{search} 100\% & \texttt{search} 96\% \\
+\midrule
+Checkout & A (monolith) & 4{,}853 & 4{,}796 & -- & -- & -- & \texttt{mono-db} 100\% & \texttt{mono-db} 100\% \\
+ & B (4 services) & 1{,}246 & 2{,}766 & 0.257 & 0.577 & none & \texttt{order} 99\% & \texttt{inventory} 100\% \\
+ & C (8 services) & 462 & 1{,}403 & 0.0951 & 0.293 & none & \texttt{orders} 98\% & \texttt{orders} 100\% \\
+ & D (8 + Istio) & 477 & 1{,}395 & 0.0982 & 0.291 & none & \texttt{orders} 100\% & \texttt{orders} 98\% \\

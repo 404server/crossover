@@ -1,0 +1,47 @@
+\subsection{Capacity under demand-proportional allocation (RQ2, H2)}
+\label{sec:res-alloc}
+
+\begin{table}[t]
+\caption{Equal versus demand-proportional CPU allocation in the local environment: USL peak throughput
+$X_{\max}$ (requests/s), the same relative to the monolith measured in the same campaign, concurrency levels at
+which a configuration measured above the monolith, and the busiest container at 64 clients with its CPU
+utilisation.}
+\label{tab:alloc}
+\centering\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}llrrrrlll@{}}
+\toprule
+& & \multicolumn{2}{c}{$X_{\max}$} & \multicolumn{2}{c}{vs.\ A} & & \multicolumn{2}{c}{Busiest container at $N=64$} \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}\cmidrule(l){8-9}
+Workload & Configuration & equal & prop. & equal & prop. & Wins over A & equal & prop. \\
+\midrule
+\xoinput{generated/tab-alloc.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:alloc} compares the equal split with the demand-proportional allocation of
+Section~\ref{sec:treatments}. Relative to the monolith measured alongside, moving the budget to where the demand
+was raised the capacity of the decomposed configurations by a factor of \xo{alloc/gainmin} to
+\xo{alloc/gainmax}. B reached \xo{prop/xmaxpct/browse/B}\% of the monolith's peak on browse and
+\xo{prop/xmaxpct/checkout/B}\% on checkout, against \xo{xmaxpct/browse/B}\% and \xo{xmaxpct/checkout/B}\% under
+the equal split. C reached \xo{prop/xmaxpct/browse/C}\% and \xo{prop/xmaxpct/checkout/C}\%, against
+\xo{xmaxpct/browse/C}\% and \xo{xmaxpct/checkout/C}\%. The monolith's allocation is unchanged, and its peak of
+\xo{prop/usl/browse/A/xmax} browse requests per second was close to its \xo{usl/browse/A/xmax} in the first
+campaign. No decomposed configuration matched the monolith at any measured concurrency level, so \textbf{H2 is
+falsified under this treatment as well}.
+
+The busiest containers explain why. The monolith was still bound by its database. B and C were still bound by
+their edge services, now at the limit of a two- to fourfold larger quota. The exception is checkout in~B, where
+\texttt{order} was no longer the limit and \texttt{inventory} took its place. Reallocation removed the idle shares
+but not the extra work. At 600 browse requests per second, C's application tier needed
+\xo{prop/cpums/browse/C/600/app}\,ms of CPU per request against the monolith's \xo{prop/cpums/browse/A/600/app}\,ms.
+At that cost even a perfect split of the four application cores serves fewer than half the requests per second
+at which the monolith's database saturated.
+
+The treatment also lowered the latency penalty at low load. The p99 ratios to the monolith at the lowest rate fell to
+\xo{prop/ratio/checkout/B/25/est}--\xo{prop/ratio/browse/D/50/est}, against
+\xo{ratio/browse/B/50/est}--\xo{ratio/checkout/D/25/est} under the equal split. H1 remained supported, as did H3.
+Part of the low-load penalty in the first campaign was therefore throttling rather than distribution. With one
+client, C's \texttt{search} service was throttled in \xo{chot/browse/C/1/thr}\% of its CFS periods under the equal
+split and in \xo{prop/chot/browse/C/1/thr}\% with its proportional share.

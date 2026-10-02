@@ -39,11 +39,17 @@
 \providecommand{\xoenv}{kind}
 \IfFileExists{generated/\xoenv/numbers.tex}{\input{generated/\xoenv/numbers.tex}}{}
 \newcommand{\gen}[1]{generated/\xoenv/#1}
-% Numbers of the demand-proportional allocation treatment, as \xo{prop/<key>}.
-\IfFileExists{generated/kind-prop/numbers.tex}{%
-  \renewcommand{\xodef}[2]{\expandafter\def\csname xo@prop/#1\endcsname{#2}}%
-  \input{generated/kind-prop/numbers.tex}%
-  \renewcommand{\xodef}[2]{\expandafter\def\csname xo@#1\endcsname{#2}}}{}
+% Numbers of the other environments and treatments, as \xo{<prefix>/<key>}.
+\let\xodefplain\xodef
+\newcommand{\xodefprefixed}[2]{\expandafter\def\csname xo@\xoprefix/#1\endcsname{#2}}
+\newcommand{\xoload}[2]{\IfFileExists{generated/#2/numbers.tex}{\def\xoprefix{#1}\let\xodef\xodefprefixed
+  \input{generated/#2/numbers.tex}\let\xodef\xodefplain}{}}
+\xoload{prop}{kind-prop}  % demand-proportional allocation
+\xoload{eks}{eks}         % cloud environment
+% equal vs. proportional comparison (analysis/compare_alloc.py); keys carry the alloc/ prefix
+\IfFileExists{generated/numbers-alloc.tex}{\input{generated/numbers-alloc.tex}}{}
+% autoscaling treatment; its keys already carry the hpa/ prefix
+\IfFileExists{generated/eks-hpa/numbers-hpa.tex}{\input{generated/eks-hpa/numbers-hpa.tex}}{}
 % Table bodies are \input inside tabular; the primitive form keeps \bottomrule legal after them.
 \makeatletter\newcommand{\xoinput}[1]{\@@input #1 }\makeatother
 
