@@ -36,11 +36,28 @@ def lg(script):
     return ["kubectl", "exec", "-i", "-n", gen.LOAD_NS, "deploy/loadgen", "--", "sh", "-c", f"({script}); rc=$?; sleep 2; exit $rc"]
 
 
-def sh(cmd, stdin=None, check=True):
-    r = subprocess.run(cmd, input=stdin, capture_output=True)
-    if check and r.returncode != 0:
-        raise RuntimeError(f"{' '.join(cmd)[:200]}\n{r.stderr.decode()[-2000:]}")
-    return r.stdout
+NET_ERRORS = ("Unable to connect to the server", "TLS handshake timeout", "i/o timeout", "connection refused",
+              "connection reset", "no such host", "network is unreachable", "context deadline exceeded", "timed out")
+
+
+def sh(cmd, stdin=None, check=True, timeout=1200, retries=30):
+    """Runs a command. Every kubectl call made through here is idempotent, so one that fails because the
+    laptop lost its connection to the cluster is repeated once the API server answers again; the work in
+    the cluster carries on meanwhile. The timeout guards against connections that hang instead of failing."""
+    for i in range(retries + 1):
+        try:
+            r = subprocess.run(cmd, input=stdin, capture_output=True, timeout=timeout)
+            err = r.stderr.decode()
+        except subprocess.TimeoutExpired:
+            r, err = None, "timed out"
+        if r is not None and r.returncode == 0:
+            return r.stdout
+        if cmd[0] == "kubectl" and i < retries and any(m in err for m in NET_ERRORS):
+            wait_api()
+            continue
+        if check:
+            raise RuntimeError(f"{' '.join(cmd)[:200]}\n{err[-2000:]}")
+        return r.stdout if r is not None else b""
 
 
 def kube(*args, stdin=None, check=True):
@@ -63,27 +80,47 @@ def targets(cfg, workload, n=2000, seed=1):
     return "\n".join(out) + "\n"
 
 
-def attack(tfile, duration, out=None, rate=None, workers=None, bodies=False, settle=0):
+def attack(tfile, duration, out=None, rate=None, workers=None, bodies=False, settle=0, wd="/work"):
     """rate -> open loop (constant arrivals, no coordinated omission); workers -> closed loop.
-    One exec per step: the report goes to stderr, the encoded results (if kept) to stdout, which
-    matters when the cluster is a long round trip away. settle: seconds of the same load first,
-    unrecorded and in the same exec, so the recorded window follows without a gap."""
+    The attack runs detached inside the load generator, so a lost connection between the laptop and the
+    cluster does not interrupt a measurement: the laptop starts it, polls for its end and then collects the
+    report and, if kept, the encoded results. settle: seconds of the same load first, unrecorded, so the
+    recorded window follows without a gap."""
     flags = f"-targets={tfile} -timeout=10s"
     flags += f" -rate={rate}" if rate else f" -rate=0 -workers={workers} -max-workers={workers}"
     flags += "" if bodies else " -max-body=0"
-    script = f"vegeta attack {flags} -duration={duration}s > /work/r.bin && vegeta report -type=json < /work/r.bin >&2"
+    run = f"vegeta attack {flags} -duration={duration}s > {wd}/r.bin && vegeta report -type=json < {wd}/r.bin > {wd}/report.json"
     if settle:
-        script = f"vegeta attack {flags} -duration={settle}s > /dev/null && " + script
+        run = f"vegeta attack {flags} -duration={settle}s > /dev/null && " + run
     if out:
-        script += " && vegeta encode --to json < /work/r.bin | gzip -9 > /work/r.gz && wc -c < /work/r.gz >&2"
-    r = subprocess.run(lg(script), capture_output=True)
-    err = r.stderr.decode().splitlines()
-    report = next((l for l in reversed(err) if l.startswith("{")), None)
-    if r.returncode != 0 or report is None:
-        raise RuntimeError(f"attack failed: {r.stderr.decode()[-2000:]}")
+        run += f" && vegeta encode --to json < {wd}/r.bin | gzip -9 > {wd}/r.gz && wc -c < {wd}/r.gz > {wd}/size"
+    token = f"{time.time():.6f}"  # tells a retry whether this attack was started at all
+    start = (f"mkdir -p {wd}; rm -f {wd}/done {wd}/report.json {wd}/size; echo {token} > {wd}/started; "
+             f"nohup sh -c '{run}; echo $? > {wd}/done' < /dev/null > {wd}/attack.log 2>&1 & "
+             f"while [ ! -f {wd}/done ]; do sleep 1; done; cat {wd}/done {wd}/report.json {wd}/size 2>/dev/null; true")
+    poll = f"if [ -f {wd}/done ]; then cat {wd}/done {wd}/report.json {wd}/size 2>/dev/null; fi; true"
+    deadline = time.time() + duration + settle + 1800
+    try:  # normally one exec starts the attack, waits for it and returns the results
+        r = subprocess.run(lg(start), capture_output=True, timeout=duration + settle + 900)
+        res = r.stdout.decode() if r.returncode == 0 else ""
+    except subprocess.TimeoutExpired:
+        res = ""
+    while not res.strip():  # the connection broke; the attack carries on inside the load generator
+        wait_api()
+        if sh(lg(f"cat {wd}/started 2>/dev/null; true")).decode().strip() != token:
+            return attack(tfile, duration, out, rate, workers, bodies, settle, wd)  # it never started
+        res = sh(lg(poll)).decode()
+        if not res.strip():
+            if time.time() > deadline:
+                raise RuntimeError("attack did not finish")
+            time.sleep(5)
+    lines = res.splitlines()
+    if lines[0].strip() != "0":
+        raise RuntimeError(f"attack failed ({lines[0].strip()}): {sh(lg(f'tail -c 2000 {wd}/attack.log'), check=False).decode()}")
+    report = json.loads(next(l for l in lines[1:] if l.startswith("{")))
     if out:
-        fetch("/work/r.gz", int(err[-1]), out)
-    return json.loads(report)
+        fetch(f"{wd}/r.gz", int(lines[-1]), out)
+    return report
 
 
 def fetch(path, size, out):
@@ -191,9 +228,16 @@ def recover(tfile, tries=30):
     raise RuntimeError("system under test did not recover from overload")
 
 
-def wait_api(limit=6 * 3600):
+def api_ok():
+    try:
+        return subprocess.run(["kubectl", "get", "--raw", "/readyz"], capture_output=True, timeout=60).stdout.strip() == b"ok"
+    except subprocess.TimeoutExpired:
+        return False
+
+
+def wait_api(limit=12 * 3600):
     t0 = time.time()
-    while sh(["kubectl", "get", "--raw", "/readyz"], check=False).strip() != b"ok":
+    while not api_ok():
         if time.time() - t0 > limit:
             sys.exit("cluster API unreachable for too long")
         time.sleep(30)
@@ -388,15 +432,18 @@ if __name__ == "__main__":
         for cfg in order:
             if (out / f"rep{rep}" / cfg / "done").exists():
                 continue
-            for attempt in range(3):
+            failures = 0
+            while True:
                 try:
                     cell(rep, cfg, a, out)
                     break
-                except Exception as e:  # e.g. the laptop lost its network mid-step; the cell restarts clean
-                    log(f"  !! rep{rep}/{cfg} failed ({type(e).__name__}: {str(e)[-300:]}); retrying once the API is back")
+                except Exception as e:  # the cell restarts clean
+                    offline = not api_ok()  # a failure while the cluster was unreachable does not count
+                    log(f"  !! rep{rep}/{cfg} failed ({type(e).__name__}: {str(e)[-300:]}){' while offline' if offline else ''}; retrying")
                     wait_api()
                     sh(lg("pkill vegeta; true"), check=False)  # an orphaned attack must not overlap the retry
-            else:
-                sys.exit(f"rep{rep}/{cfg} failed three times")
+                    failures += not offline
+                    if failures >= 3:
+                        sys.exit(f"rep{rep}/{cfg} failed three times")
     kube("delete", "ns", gen.NS, "--ignore-not-found", "--wait=false")
     log("campaign complete")

@@ -11,18 +11,24 @@ exec caffeinate -dimsu bash -c '
   while kill -0 "$0" 2>/dev/null; do sleep 30; done
   echo "$(date +%H:%M:%S) main EKS campaign finished"
   if [ -f hpa.ready ]; then
-    account=$(aws sts get-caller-identity --query Account --output text)
+    # every AWS call is retried: the network of the laptop may be down when this stage begins
+    until account=$(aws sts get-caller-identity --query Account --output text 2>/dev/null) && [ -n "$account" ]; do sleep 60; done
     reg="$account.dkr.ecr.ap-southeast-2.amazonaws.com"
     # This account may not create CloudFormation stacks (organisation policy), so the extra capacity comes
     # from scaling the 8-core node group to three nodes: 3 x c7g.2xlarge + 1 x c7g.xlarge for the SUT.
-    aws eks update-nodegroup-config --region ap-southeast-2 --cluster-name crossover --nodegroup-name sut-8 \
-      --scaling-config minSize=1,maxSize=3,desiredSize=3
-    for i in $(seq 90); do [ "$(kubectl get nodes -l crossover/role=sut --no-headers | grep -c " Ready")" -ge 4 ] && break; sleep 20; done
+    until aws eks update-nodegroup-config --region ap-southeast-2 --cluster-name crossover --nodegroup-name sut-8 \
+      --scaling-config minSize=1,maxSize=3,desiredSize=3 >/dev/null; do sleep 60; done
+    ready=0
+    for i in $(seq 540); do [ "$(kubectl get nodes -l crossover/role=sut --no-headers 2>/dev/null | grep -c " Ready")" -ge 4 ] && { ready=1; break; }; sleep 20; done
     kubectl get nodes -l crossover/role=sut --no-headers
+    if [ "$ready" = 1 ]; then
     # 3.5-core replicas so that two fit an 8-core node; a 4-core database tier so that the database of the monolith is not the
     # first limit; namespace quota 3 x 3.5 + 4 = 14.5 cores for every configuration.
     python3 campaign.py --env eks-hpa --ramp --hpa 24 --configs A,B,C --reps 3 --alloc alloc-prop.json \
       --app-cpu 3500 --db-cpu 4000 --image "$reg/crossover:1.0" --loadgen-image "$reg/crossover-loadgen:1.0"
+    else
+      echo "$(date +%H:%M:%S) SUT nodes not ready after 3 h: skipping the autoscaling treatment"
+    fi
     echo "$(date +%H:%M:%S) autoscaling campaign exited with $?"
   else
     echo "$(date +%H:%M:%S) run/hpa.ready missing: skipping the autoscaling treatment"
