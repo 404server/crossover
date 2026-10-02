@@ -1,0 +1,41 @@
+\appendix
+\section{Software versions and settings}
+\label{sec:appendix}
+
+Table~\ref{tab:repro} lists what an independent replication needs beyond the repository. Every cell's
+\texttt{meta.json} additionally records the full pod and node specifications, including image digests.
+
+\begin{table}[ht]
+\caption{Environments, software versions and settings.}
+\label{tab:repro}
+\centering\footnotesize
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.2\linewidth}>{\raggedright\arraybackslash}p{0.74\linewidth}@{}}
+\toprule
+Item & Value \\
+\midrule
+Local host & Apple M4 Pro (8 performance and 4 efficiency cores), 24\,GiB, macOS 27.0.1, Docker Engine 29.7.2;
+  Docker Desktop VM with 12 vCPUs and 11.7\,GiB \\
+Local cluster & kind 0.31.0, Kubernetes v1.35.0, node image Debian 12, kernel 6.12.76-linuxkit, containerd 2.2.0,
+  cgroup v2 \\
+Cloud cluster & Amazon EKS, Kubernetes v1.35.8, ap-southeast-2a; system under test on c7g.2xlarge and c7g.xlarge,
+  load generator on c7g.xlarge; Amazon Linux 2023, kernel 6.12.103, containerd 2.2.7; Amazon VPC CNI 1.22.4,
+  kube-proxy 1.35.3 (iptables mode), CoreDNS 1.13.2, metrics-server 0.9.0 \\
+Application & Java 25.0.4 (Temurin 25.0.4+7, \texttt{eclipse-temurin:25-jre}), Spring Boot 4.1.1 (Spring MVC
+  7.0.9, Tomcat 11.0.24, HikariCP 7.0.2, PostgreSQL JDBC 42.7.13, Jackson 3.1.5); image \texttt{crossover:1.0},
+  and \texttt{1.1} with the service-demand switch \\
+JVM and server & \texttt{-XX:+UseG1GC -XX:MaxRAMPercentage=50}; Tomcat 200 worker threads, at most 1{,}000
+  connections, keep-alive idle timeout 75\,s and no request limit per connection; HikariCP pool of 10 \\
+Database & PostgreSQL 17.11 (\texttt{postgres:17-alpine}), defaults except \texttt{max\_connections=200}
+  (\texttt{fsync} and \texttt{synchronous\_commit} on, \texttt{shared\_buffers} 128\,MB); data on an
+  \texttt{emptyDir} volume; 2\,GiB of memory divided equally among the database pods \\
+Mesh & Istio 1.31.1, minimal profile, sidecar injection as native sidecars with
+  \texttt{holdApplicationUntilProxyStarts}; sidecar requests 0.1 CPU and 64\,MiB, limits 1 CPU and 256\,MiB;
+  PERMISSIVE peer authentication with automatic mutual TLS \\
+Load generator & Vegeta 12.13.0 on Alpine 3.22; \texttt{-timeout=10s}, response bodies discarded except in
+  the equivalence check; 2{,}000-request sequences per workload from one seed \\
+Procedure & open-loop levels of \xo{openstep}\,s, closed-loop levels of \xo{closedstep}\,s, 5\,s pause between
+  levels; warm-up of \xo{warmup}\,s closed loop with 16 workers; recovery probe of 3\,s at 20 requests per second;
+  equivalence check on the first 100 requests of each workload at 20 requests per second \\
+\bottomrule
+\end{tabular}
+\end{table}
