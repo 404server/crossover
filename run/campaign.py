@@ -13,6 +13,7 @@ finished (rep, config) cells are skipped. Layout of the output directory:
 """
 import argparse
 import datetime
+import gzip
 import json
 import os
 import pathlib
@@ -65,15 +66,31 @@ def attack(tfile, duration, out=None, rate=None, workers=None, bodies=False):
     flags += "" if bodies else " -max-body=0"
     script = f"vegeta attack {flags} > /work/r.bin && vegeta report -type=json < /work/r.bin >&2"
     if out:
-        script += " && vegeta encode --to json < /work/r.bin | gzip -1"
+        script += " && vegeta encode --to json < /work/r.bin | gzip -9 > /work/r.gz && wc -c < /work/r.gz >&2"
     r = subprocess.run(LG + [script], capture_output=True)
-    if r.returncode != 0:
+    err = r.stderr.decode().splitlines()
+    report = next((l for l in reversed(err) if l.startswith("{")), None)
+    if r.returncode != 0 or report is None:
         raise RuntimeError(f"attack failed: {r.stderr.decode()[-2000:]}")
     if out:
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_bytes(r.stdout)
-    report = next(l for l in reversed(r.stderr.decode().splitlines()) if l.startswith("{"))
+        fetch("/work/r.gz", int(err[-1]), out)
     return json.loads(report)
+
+
+def fetch(path, size, out):
+    """Copies a file out of the load generator. Over a long round trip, exec streams have ended early
+    without an error (step files cut at a 16 KiB boundary), so the copy resumes where it stopped until
+    the size matches, and the gzip stream is checked before the file is kept."""
+    data = b""
+    for _ in range(30):
+        data += sh(LG + [f"tail -c +{len(data) + 1} {path}"])
+        if len(data) >= size:
+            break
+    if len(data) != size:
+        raise RuntimeError(f"could not copy {path} out of the load generator ({len(data)} of {size} bytes)")
+    gzip.decompress(data)  # raises on a damaged stream
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_bytes(data)
 
 
 def push(data, path):
