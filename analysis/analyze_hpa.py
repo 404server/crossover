@@ -146,14 +146,15 @@ def main():
                                          "\n".join(f"\\xodef{{{k}}}{{{v}}}" for k, v in sorted(nums.items())) + "\n")
     for wl in WORKLOADS:
         rates = sorted({r["rate"] for c in out["ramp"].values() for r in c.get(wl, [])})
-        head = ["rate"] + [f"{c}{k}" for c in out["configs"] for k in ("p99", "rep", "cap")]
+        head = ["rate"] + [f"{c}{k}" for c in out["configs"] for k in ("p99", "lo", "hi", "rep", "cap")]
         lines = [" ".join(head)]
         for rate in rates:
             row = [str(rate)]
             for c in out["configs"]:
                 r = next((x for x in out["ramp"].get(c, {}).get(wl, []) if x["rate"] == rate), None)
                 ok = r and r["sat"] == 0
-                row += [f"{r['p99']:.6g}" if ok else "nan", f"{r['replicas']:.6g}" if r and r["replicas"] is not None else "nan",
+                row += [f"{r[k]:.6g}" if ok else "nan" for k in ("p99", "p99_lo", "p99_hi")]
+                row += [f"{r['replicas']:.6g}" if r and r["replicas"] is not None else "nan",
                         f"{r['quota_used_m'] / 1000:.6g}" if r and r["quota_used_m"] is not None else "nan"]
             lines.append(" ".join(row))
         (gen / f"hpa-{wl}.csv").write_text("\n".join(lines) + "\n")
