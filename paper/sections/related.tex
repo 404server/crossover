@@ -15,8 +15,8 @@ Ueda et al.\ characterised monolithic and microservice versions of the Acme Air 
 Node.js and Java and found that, on identical hardware, the microservice version's performance
 could be up to 79.2\% lower, attributing the gap to runtime overheads and to Docker network
 virtualisation~\cite{Ueda2016}. Villamizar et al.\ deployed monolithic and microservice versions of
-an enterprise application built with the Play framework on AWS and compared their performance and
-infrastructure cost~\cite{Villamizar2015}. Al-Debagy and Martinek measured about 6\% higher
+a Play application on AWS, each on the smallest instances that met a service-level target. The microservices were
+slower on a CPU-heavy service, faster on a database-bound one, and 17\% cheaper~\cite{Villamizar2015}. Al-Debagy and Martinek measured about 6\% higher
 throughput for the monolith in a concurrency test and no significant difference in a load
 test~\cite{AlDebagy2018}. Jatkiewicz and Okr\'oj built the same business logic in both styles and
 tested it with JMeter locally and on Microsoft Azure; the monolith was more efficient in almost all
@@ -29,7 +29,8 @@ comparison depend on the scaling strategy. Bj{\o}rndal et al.\ derived performan
 (latency, throughput, scalability, CPU, memory and network use) from a literature review and an
 industry survey and benchmarked a monolith and its microservice counterpart locally and on Azure
 Kubernetes Service with JMeter~\cite{Bjorndal2021}. Faustino et al.\ measured performance at each
-step of a migration from monolith to modular monolith to microservices~\cite{Faustino2024}.
+step of a migration from monolith to modular monolith to microservices with a single user, and found the
+microservice version slower for every operation they tested~\cite{Faustino2024}.
 
 Read together, these studies disagree less than their conclusions suggest. Where both styles run on the same
 hardware, the monolith is faster or equal: in Ueda et al.'s, Al-Debagy and Martinek's and Jatkiewicz and
@@ -40,9 +41,9 @@ expected. What it can add is the size of the gap, where the gap comes from, and 
 or elastic capacity closes it.
 
 Benchmark suites contain some of the same comparison. DeathStarBench includes Java monoliths for
-two of its applications and uses them as baselines, reporting for instance that a mismanaged
-dependency worsens tail latency by $10.4\times$ relative to the monolithic Social
-Network~\cite{Gan2019}; it does not sweep load to locate a crossover between the two designs.
+two of its applications and uses them as baselines, reporting for instance that mismanaging a single dependency
+hurts tail latency by $10.4\times$ in the Social Network, compared with the corresponding monolithic
+service~\cite{Gan2019}.
 
 Two reviews summarise the state of this literature. Rodrigues et al.\ analysed studies of the
 performance, throughput and deployment cost of monolith-to-microservice migrations and identified
@@ -62,13 +63,13 @@ one process or in several at deployment time, and reported up to $15\times$ lowe
 than a microservice deployment of the same application with their Service Weaver
 prototype~\cite{Ghemawat2023}. Our testbed uses the same mechanism (one binary, placement chosen per deployment)
 to hold the code constant across configurations. Medeiros R\^ego et al.\ deployed Online Boutique at several
-granularity levels with Service Weaver on Amazon EKS and observed that distributing services improves scalability
-under high load but adds communication overhead~\cite{MedeirosRego2025}. Jayasinghe et al.\ showed
+granularity levels with Service Weaver on Amazon EKS. On one node the monolith had the lowest p95 at every load,
+and distributed placements did better at high load only when they ran on two nodes, that is, with twice the
+hardware~\cite{MedeirosRego2025}. Jayasinghe et al.\ showed
 that decomposition can raise or lower throughput and mean latency depending on the number of calls,
 the service demand, the concurrency and the decomposition strategy~\cite{Jayasinghe2020}. Shadija
-et al.\ deployed the same ASP.NET microservices in one container and in two and measured a latency
-increase below 1\% for a single workflow, while cautioning that nested dependencies could compound
-small delays~\cite{Shadija2017UCC}. Hassan et al.\ mapped the research on the granularity problem
+et al.\ deployed the same ASP.NET microservices on one server and on two and reported differences below 1\% for a
+single workflow, while cautioning that nested dependencies could compound small delays~\cite{Shadija2017UCC}. Hassan et al.\ mapped the research on the granularity problem
 in microservice transitions~\cite{Hassan2020}, and Taibi and Lenarduzzi list services that are too small, which
 add communication without adding cohesion, among the bad smells of microservice architectures~\cite{Taibi2018}.
 At the scale of microseconds, which is the scale of our services' business logic, fixed per-call overheads
@@ -137,57 +138,71 @@ response header per hop.
 Table~\ref{tab:related} compares the empirical studies closest to this one.
 
 \begin{table*}[t]
-\caption{Empirical comparisons of monolithic and microservice deployments. ``n/r'': not reported in
-the text we could access; ``?'': not verifiable because the full text was not accessible to us.
-Rows marked $^{\dagger}$ were checked against the abstract only.}
+\caption{Empirical comparisons of monolithic and microservice deployments, from the full texts except where
+marked: $^{\dagger}$~abstract only (``?'': not stated there); $^{\ddagger}$~read in the 2022 preprint. Loop types
+in parentheses are our reading where a paper does not name them.}
 \label{tab:related}
 \centering
-\footnotesize
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{@{}>{\raggedright\arraybackslash\hspace{0pt}}p{0.07\linewidth}>{\raggedright\arraybackslash\hspace{0pt}}p{0.14\linewidth}>{\raggedright\arraybackslash\hspace{0pt}}p{0.14\linewidth}>{\raggedright\arraybackslash\hspace{0pt}}p{0.14\linewidth}>{\raggedright\arraybackslash\hspace{0pt}}p{0.11\linewidth}>{\raggedright\arraybackslash\hspace{0pt}}p{0.1\linewidth}>{\raggedright\arraybackslash\hspace{0pt}}p{0.1\linewidth}@{}}
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}>{\raggedright\arraybackslash\hspace{0pt}}p{0.1\linewidth}>{\raggedright\arraybackslash\hspace{0pt}}p{0.16\linewidth}>{\raggedright\arraybackslash\hspace{0pt}}p{0.13\linewidth}>{\raggedright\arraybackslash\hspace{0pt}}p{0.16\linewidth}>{\raggedright\arraybackslash\hspace{0pt}}p{0.1\linewidth}>{\raggedright\arraybackslash\hspace{0pt}}p{0.14\linewidth}>{\raggedright\arraybackslash\hspace{0pt}}p{0.12\linewidth}@{}}
 \toprule
-\textbf{Study} & \textbf{Architectures} & \textbf{Setting} & \textbf{Load (loop)} &
-\textbf{Latency} & \textbf{Layer split} & \textbf{Sweep / crossover} \\
+\textbf{Study} & \textbf{Architectures (application)} & \textbf{Setting} & \textbf{Load generator (loop)} &
+\textbf{Latency} & \textbf{Equal resources} & \textbf{Load levels} \\
 \midrule
-Blinowski et al.~\cite{Blinowski2022} & Monolith vs.\ microservices (Spring Boot, ASP.NET Core) &
-  Local PC, Azure Spring Cloud, Azure App Service & JMeter, 10 threads (closed) & Throughput only &
-  No & n/r / not located \\
-Ueda et al.$^{\dagger}$ \cite{Ueda2016} & Monolith vs.\ microservices (Acme Air, Node.js, Java) &
-  Same hardware, Docker & ? & ? & Runtime profile & ? \\
-Villamizar et al.$^{\dagger}$ \cite{Villamizar2015} & Monolith vs.\ microservices (Play) & AWS & ? & ? & n/r & ? \\
-Al-Debagy \& Martinek$^{\dagger}$ \cite{AlDebagy2018} & Monolith vs.\ microservices & ? &
-  Concurrency and load tests, tool ? & Throughput only & n/r & Not located \\
-Jatkiewicz \& Okr\'oj$^{\dagger}$ \cite{Jatkiewicz2023} & Monolith vs.\ microservices, same logic &
-  Local, Microsoft Azure & JMeter (?) & ? & n/r & ? \\
-Berry et al.$^{\dagger}$ \cite{Berry2024} & Monolith vs.\ microservices, with replication & ? & ? & ? &
-  n/r & Replica counts varied \\
-Faustino et al.$^{\dagger}$ \cite{Faustino2024} & Monolith, modular monolith, microservices & ? & ? & ? &
-  n/r & Per migration step \\
-Bj{\o}rndal et al.$^{\dagger}$ \cite{Bjorndal2021} & Monolith vs.\ microservices & Local, Azure
-  Kubernetes Service & JMeter (?) & Latency (type ?) & n/r & ? \\
-Zhao et al.$^{\dagger}$ \cite{Zhao2025} & Fine vs.\ coarse microservices (Train Ticket) & ? & ? &
-  Response time (?) & n/r & Five request rates \\
+Blinowski et al.~\cite{Blinowski2022} & Monolith vs.\ services; REST app in Spring Boot and ASP.NET Core, no
+  database & Laptop; Azure Spring Cloud, App Service & JMeter, 10 threads (closed) & None (throughput) & Locally
+  yes; in the cloud equal cost & One; sweep over VM size and instances \\
+Ueda et al.~\cite{Ueda2016} & Monolith vs.\ 4 services; Acme Air (Node.js, Java EE), MongoDB & IBM z13
+  partitions, bare and Docker & JMeter at peak throughput (closed) & None (throughput, CPU per transaction) & Yes,
+  same cores & One per configuration \\
+Villamizar et al.~\cite{Villamizar2015} & Monolith vs.\ 2 services and gateway; Play, PostgreSQL & AWS EC2 VMs &
+  JMeter at fixed request rates & Mean, p90 & No: smallest instances meeting an SLA & One \\
+Al-Debagy \& Martinek~\cite{AlDebagy2018} & Monolith vs.\ services; JHipster (Spring Boot) & One Docker host &
+  JMeter, 100--7{,}000 threads, no wait (closed) & Mean & Not stated & Five thread counts \\
+Jatkiewicz \& Okr\'oj$^{\dagger}$~\cite{Jatkiewicz2023} & Monolith vs.\ services, same logic & Local; Azure &
+  JMeter & ? & ? & ? \\
+Berry et al.~\cite{Berry2024} & Monolith vs.\ gateway and 2 services; Node.js, shared PostgreSQL & One host,
+  Docker Compose & Gatling, 200 users/s, 5\,s think time & Response-time bands, Apdex & No: replicas varied, no
+  limits & One profile; sweep over replicas \\
+Faustino et al.$^{\ddagger}$~\cite{Faustino2024} & Monolith, modular monolith, services; Spring Boot ORM app &
+  One host, Docker & JMeter, one user (closed) & Mean & Not stated & None (data size varied) \\
+Bj{\o}rndal et al.~\cite{Bjorndal2021} & Monolith vs.\ 4 services; ASP.NET Core, SQL Server & Desktop
+  (monolith native, services on Kubernetes); Azure App Service vs.\ AKS & JMeter constant-throughput timer;
+  Azure load tests & Mean & No & Up to 8 rate steps \\
+Zhao et al.~\cite{Zhao2025} & 1, 2, 4 and 10, 20, 40 services; Pet Clinic, Train Ticket & One host, Docker
+  Compose & Locust, 1\,s pacing (closed) & Mean, median (outliers removed) & Not stated; no CPU limits & Five
+  rates \\
+Medeiros R\^ego et al.~\cite{MedeirosRego2025} & Monolith vs.\ 7 placements; Online Boutique on Service Weaver &
+  Amazon EKS, 1--2 nodes & Locust, 1{,}000--5{,}000 users & p95 (all operations) & Partly: two-node variants
+  have twice the hardware & Five user counts \\
+Jayasinghe et al.$^{\dagger}$~\cite{Jayasinghe2020} & Decompositions of standard benchmarks & ? & ? (concurrent
+  users varied) & Mean & ? & Several concurrencies \\
+Shadija et al.~\cite{Shadija2017UCC} & Same services on one vs.\ two servers; ASP.NET & Not stated & Not named;
+  batches of 1--5{,}000 requests & Time per batch & Not stated & Six volumes \\
 \midrule
-This study & Monolith; coarse (4 services); fine (8); fine + Istio & Kubernetes: kind on one host;
-  Amazon EKS (Graviton); static and autoscaled CPU & Vegeta constant rate (open) for latency;
-  $N$-worker sweeps (closed) for capacity & p50, p95, p99, p99.9 & Yes: app, db, ser, net,
-  framework, edge & 13--14 rate levels, 9 concurrency levels \\
+This study & Monolith; 4 services; 8; 8 with Istio; one binary & kind on one host; Amazon EKS & Vegeta constant
+  rate (open) for latency; $N$ workers (closed) for capacity & p50--p99.9, per-layer for every request & Yes, plus
+  proportional and autoscaled treatments & 13--14 rates, 9 concurrencies \\
 \bottomrule
 \end{tabular}
 \end{table*}
 
-Against this background we see four gaps, which the present study is designed to address. First,
-to our knowledge no comparison sweeps load finely enough, with an open-loop generator, to locate
-where the tail latency of the two styles crosses; most use a fixed thread pool or a few load
-levels. Second, most studies report throughput or mean response time, and tail percentiles, which
-Section~\ref{sec:bg-costs} identifies as the quantity distribution affects most, are rarely given.
-Third, we are not aware of a study that decomposes per-request latency into layers (application,
-database, serialisation, network, framework) across configurations built from identical code,
+Table~\ref{tab:related} shows four gaps, which the present study is designed to address. First, none of the
+twelve comparisons locates a load at which the two styles cross. Only two pace requests at a target rate
+(Villamizar et al.\ and Bj{\o}rndal et al.), and the others use closed loops or do not say. DeathStarBench drives its
+services with open-loop generators but compares its monolithic baselines with the microservices at a low and a
+high load and during recovery from an overload, not along a load sweep~\cite{Gan2019}. Second, only two of the
+twelve report a tail percentile (p90 and p95), although Section~\ref{sec:bg-costs} identifies the tail as the
+quantity distribution affects most.
+Third, none decomposes per-request latency into layers (application, database, serialisation, network,
+framework) across configurations built from identical code; Ueda et al.\ break down CPU time per transaction, and
+Faustino et al.\ report the serialisation share of one operation,
 which is what is needed to say where the extra time of a distributed configuration goes. Fleet-scale studies
 count serialisation and RPC processing among the costs every request pays~\cite{Kanev2015,Seemakhupt2023}, but
-they compare services with each other, not one application in different topologies. Fourth,
-the resources given to each configuration are rarely held equal or even reported in enough detail
-to judge whether a difference comes from the architecture or from the allocation; Berry et al.'s
+they compare services with each other, not one application in different topologies. Fourth, only Ueda et al., and Blinowski et al.\ in their local runs, hold the resources of the two styles
+equal; the others give the microservice version different instances, more replicas or more hardware, or do not
+say, so a difference cannot be traced to the architecture rather than the allocation; Berry et al.'s
 dependence on the replicated gateway~\cite{Berry2024} and Blinowski et al.'s cloud results, where
 the gateway ran on its own virtual machine~\cite{Blinowski2022}, show how strongly allocation can
 decide the outcome.
