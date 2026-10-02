@@ -114,10 +114,13 @@ fails waits for the API server and starts over clean.
 * **Demand-proportional allocation.** `analysis/alloc.py --from kind > run/alloc-prop.json` derives per-workload
   CPU shares from a finished equal-budget campaign; `campaign.py --alloc run/alloc-prop.json` redeploys every
   decomposed configuration per workload with those shares. Compare with `analysis/compare_alloc.py`.
-* **Autoscaling.** `campaign.py --ramp --hpa 24 --alloc run/alloc-prop.json` adds a CPU-based HorizontalPodAutoscaler
-  (70 % target) per service after the warm-up and a namespace CPU quota (default: 3 × application budget +
-  database budget), then raises the open-loop rate in 180 s levels. Analyse with `analysis/analyze_hpa.py`.
-  `run/hpa-smoke.sh` tests this mode on kind first.
+* **Autoscaling.** `campaign.py --ramp --hpa 24 --alloc run/alloc-prop.json --app-cpu 3500 --db-cpu 4000` adds a
+  CPU-based HorizontalPodAutoscaler (70 % target) per service after the warm-up and a namespace CPU quota (default:
+  3 × application budget + database budget), then raises the open-loop rate in 180 s levels of which the last 60 s
+  are recorded (`--ramp-window`); a level is sustained only if p99 ≤ `--slo-ms` (100). Analyse with
+  `analysis/analyze_hpa.py`. `run/hpa-smoke.sh` tests this mode on kind first.
+* **Service demand.** `campaign.py --work-us 1000 --image crossover:1.1` makes every module operation burn 1 ms of
+  CPU (thread CPU time, so throttled time does not count); `run/work.sh` runs the equal and proportional splits.
 
 ## Analysis outputs
 

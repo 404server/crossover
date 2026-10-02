@@ -253,24 +253,34 @@ environment with \xo{prop/reps} repetitions of all four configurations.
 \paragraph{Autoscaling under a shared ceiling.} The scalability argument for microservices is usually made for
 elastic capacity, so the third treatment adds it. Every application deployment gets a Horizontal Pod Autoscaler
 (\texttt{autoscaling/v2}). It targets 70\% average CPU utilisation of the pods' requests, allows one to 24
-replicas and uses the default scaling behaviour, and each run starts from the demand-proportional allocation. A
-namespace \texttt{ResourceQuota} caps the CPU requested by all pods of a configuration at 14 cores, three times
-the application budget plus the database budget. The autoscaler can therefore add replicas until a
-configuration's pods together hit the same ceiling: the monolith up to three replicas, the browse edge service
-of~C up to four more. Database pods are not scaled, so the database tier keeps its 2-core budget in every configuration.
-The monolith keeps its single shared database, as it would in practice.
+replicas, uses the default scaling behaviour and starts from the demand-proportional shares. A namespace
+\texttt{ResourceQuota} caps the CPU requested by all pods of a configuration at the same ceiling for every
+configuration: three times the application budget plus the database budget. Database pods are not scaled, so the
+monolith keeps its single shared database.
 
-Load is open loop and rises in levels held for 180\,s each without pause or reset: browse from 500 to 8{,}000
-requests per second in nine levels, checkout from 200 to 2{,}400 in eight. Replicas added at one level carry over
-to the next. Latency and throughput come from the last 60\,s of each level, after the autoscaler has had time to
-react, and the saturation rule of Section~\ref{sec:method} is applied to that window. Replica counts, the
-autoscalers' view and quota use are sampled every 10\,s. The autoscalers are created only after the warm-up and
-are given 30\,s with the system idle, so every ramp starts from one replica per service and new replicas join
-cold. A ramp stops after two consecutive levels with more than 5\% errors or a p99 above 2\,s. Configurations A, B
-and~C take part. D is left out because its sidecars' CPU requests would count against the quota and its
-difference from~C, the mesh, is what H3 measures. The treatment ran in the cloud environment with two more
-c7g.2xlarge nodes for the system under test. With them the nodes offer 28 vCPUs, so the quota, not the nodes,
-limits scaling. Each configuration ran \xo{hpa/reps} repetitions.
+Two parameters differ from the static treatments, and both are chosen so that the monolith can use the ceiling.
+First, the application budget is 3.5 cores. A monolith replica then fits twice on an 8-vCPU node, whereas a
+4-core replica does not fit next to the node's system pods. Second, the database budget is 4 cores. With 2 cores
+the monolith is database-bound at \xo{chot/browse/A/64/apputil}\% application utilisation in the local
+environment, below the autoscaler's target, so its
+autoscaler would never act. The ceiling is therefore $3 \times 3.5 + 4 = 14.5$ cores. The database tier still
+bounds every configuration, and a decomposed configuration, which spends more database CPU per request, reaches
+that bound earlier. Section~\ref{sec:res-hpa} states this bound alongside the measurements.
+
+Load is open loop and rises in levels without pause or reset: browse from 500 to 16{,}000 requests per second and
+checkout from 200 to 6{,}400, each level 1.4--1.5 times the previous one. The tops are at least 1.5 times the
+monolith's expected capacity. Replicas added at one level carry over to the next. Each level runs for 180\,s, of
+which only the last 60\,s are recorded, after the autoscaler has had time to react. A level is \emph{sustained} if,
+in that window, at most 5\% of requests fail, throughput reaches 90\% of the offered rate and p99 is at most
+100\,ms. The runner stops a ramp after two consecutive levels that are not sustained. Replica counts, the
+autoscalers' view and the requested CPU are sampled every 10\,s. The autoscalers are created only after the warm-up
+and are given 30\,s with the system idle, so every ramp starts from one replica per service and new replicas join
+cold.
+
+Configurations A, B and~C take part. D is left out because its sidecars' CPU requests would count against the quota
+and its difference from~C, the mesh, is what H3 measures. The treatment ran in the cloud environment, with the
+8-vCPU node group scaled to three nodes. With the 4-vCPU node, the system under test then had 28 vCPUs, so the
+quota, not the nodes, limited scaling. Each configuration ran \xo{hpa/reps} repetitions.
 
 \subsection{Statistical analysis}
 \label{sec:stats}
@@ -313,9 +323,10 @@ monolith's throughput within the tested concurrency range, and its coherency coe
 falsified if the monolith's throughput matches or exceeds every microservice configuration at every measured
 concurrency level, or if no microservice configuration has $\beta < \beta_A$. The same condition is tested
 separately under demand-proportional allocation. Under autoscaling the measurements are open-loop ramps, so the
-condition is stated on the \emph{sustained rate}: the highest offered rate at which no repetition saturated, at
-that level or any lower one. There, H2 is falsified if no decomposed configuration sustains a higher rate than the
-monolith under the same ceiling.
+condition is stated on sustained levels, and it is fixed before the autoscaling measurements. H2 is supported
+under autoscaling if a decomposed configuration either sustains, in every repetition, a higher rate than the
+monolith's highest sustained rate, or sustains a rate that the monolith also sustains while requesting less CPU
+than the monolith in every repetition. Otherwise it is falsified.
 
 \textbf{H3 (mesh compounding).} Istio's overhead grows with call-graph depth and exceeds a quarter of end-to-end
 latency on the six-hop path. With C and D differing only in the mesh, the overhead at a given offered rate is

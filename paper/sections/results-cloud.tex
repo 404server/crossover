@@ -51,9 +51,10 @@ Workload & Configuration & p99 & vs.\ A & $X_{\max}$ & vs.\ A & hop & p99 & vs.\
 }
 \end{groupplot}
 \end{tikzpicture}
-\caption{Autoscaling treatment in the cloud environment. Top: p99 latency in the last \xo{hpa/window}\,s of each
-\xo{hpa/step}\,s level (median across \xo{hpa/reps} repetitions, bars spanning the repetitions); a line ends where
-the configuration saturated. Bottom: CPU requested by all pods of the configuration at the end of each level; the
+\caption{Autoscaling treatment in the cloud environment. Top: p99 latency in the recorded last \xo{hpa/window}\,s
+of each \xo{hpa/step}\,s level (median across \xo{hpa/reps} repetitions, bars spanning the repetitions); a line
+ends where a level was no longer sustained (more than 5\% errors, throughput below 90\% of the rate, or p99 above
+\xo{hpa/slo}\,ms). Bottom: CPU requested by all pods of the configuration at the end of each level; the
 dashed line is the shared quota of \xo{hpa/cap} cores.}
 \label{fig:hpa}
 \end{figure}
