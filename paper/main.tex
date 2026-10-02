@@ -74,7 +74,8 @@ Kubernetes; CPU throttling\par}
 \paragraph{Practitioner points.}
 \begin{itemize}
 \item Under an equal CPU budget, splitting this application into services lowered peak throughput to a quarter or
-less of the monolith's; decomposition did not pay off at any load.
+less of the monolith's. Allocating the CPU in proportion to each service's demand raised it to at most \xo{prop/xmaxpct/browse/B}\%
+of the monolith's, and decomposition did not pay off at any load.
 \item Each synchronous call between services cost about 0.4\,ms of transit and a few tenths of a millisecond of CPU,
 and a sidecar mesh roughly doubled the transit cost; measure this per-hop price before deciding how finely to split.
 \item In decomposed deployments the edge service's CPU quota set the capacity, and CFS throttling made tail latency

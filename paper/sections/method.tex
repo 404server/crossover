@@ -241,8 +241,9 @@ cores for application pods, 0.1 for database pods) plus a share of the rest of i
 equals the pod's share of its tier's measured CPU use in the equal-budget campaign. The shares are medians across
 repetitions, taken at the highest offered rate that every configuration sustained there (600 requests per second
 for browse, 400 for checkout). They are computed per workload, and each workload runs on its own deployment with
-its own allocation. This is the best static allocation for a known workload, so it bounds from above what
-right-sizing can do for a decomposed deployment. It moves most of the budget to the edge. Under browse, the
+its own allocation. This is a demand-proportional heuristic tuned to each workload, not a proven optimum. The
+shares were measured at a rate where the edge service was already slightly throttled, and the floors keep some
+cores on services the workload barely uses. It moves most of the budget to the edge. Under browse, the
 \texttt{catalog} service of~B gets 2.40 cores instead of 1.0 and the \texttt{search} service of~C gets 1.88
 instead of 0.5. Under checkout, \texttt{order} in~B gets 2.14 cores and \texttt{orders} in~C gets 1.44. The
 monolith has one pod per tier, so its allocation cannot change. It is nevertheless re-measured in the same

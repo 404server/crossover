@@ -39,6 +39,11 @@ It affects every configuration, but configurations with more hops wake more thre
 slightly inflate their low-load ratios in Table~\ref{tab:h1}. On bare metal it can be controlled by pinning the
 CPU frequency governor and limiting idle states, which is part of the protocol for the remaining environments.
 
+Low-load tail latency also drifted between campaigns. The monolith, deployed identically, had a browse p99 at
+50 requests per second of \xo{p99/browse/A/50}\,ms in the first local campaign and \xo{prop/p99/browse/A/50}\,ms in
+the second. The H1 ratios of one campaign are therefore more precise than their reproducibility across campaigns
+on this host.
+
 The cloud environment removes the shared host but adds variation the local one does not have. The instances are
 on shared tenancy, so other customers' workloads can affect caches and the network. The VPC network's latency
 varies over time. Instances of one type can also differ slightly in performance. Every node sat in one

@@ -39,9 +39,12 @@ but not the extra work. At 600 browse requests per second, C's application tier 
 At that cost even a perfect split of the four application cores serves fewer than half the requests per second
 at which the monolith's database saturated.
 
-The treatment also lowered the latency penalty at low load. The p99 ratios to the monolith at the lowest rate fell to
+H1 and H3 remained supported. The p99 ratios to the monolith at the lowest rate were
 \xo{prop/ratio/checkout/B/25/est}--\xo{prop/ratio/browse/D/50/est}, against
-\xo{ratio/browse/B/50/est}--\xo{ratio/checkout/D/25/est} under the equal split. H1 remained supported, as did H3.
-Part of the low-load penalty in the first campaign was therefore throttling rather than distribution. With one
-client, C's \texttt{search} service was throttled in \xo{chot/browse/C/1/thr}\% of its CFS periods under the equal
-split and in \xo{prop/chot/browse/C/1/thr}\% with its proportional share.
+\xo{ratio/browse/B/50/est}--\xo{ratio/checkout/D/25/est} under the equal split. The allocation did not cause this
+difference. At these rates no edge container was throttled in either campaign, and the decomposed configurations'
+p99 barely changed (browse in~B: \xo{p99/browse/B/50} and \xo{prop/p99/browse/B/50}\,ms). The monolith, whose
+allocation is identical in both campaigns, measured slower in the second one: \xo{p99/browse/A/50} against
+\xo{prop/p99/browse/A/50}\,ms on browse and \xo{p99/checkout/A/25} against \xo{prop/p99/checkout/A/25}\,ms on
+checkout. Low-load tail latency therefore drifts between campaigns on this host by more than the intervals within
+one campaign suggest. Section~\ref{sec:threats} returns to this point.
