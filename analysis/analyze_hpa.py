@@ -19,6 +19,7 @@ import pathlib
 
 import numpy as np
 
+import webdata
 from analyze import ROOT, WORKLOADS, clean, fmt, incidents, load_step
 
 ERR_MAX = 0.05
@@ -179,6 +180,7 @@ def main():
                         f"{r['quota_used_m'] / 1000:.6g}" if r and r["quota_used_m"] is not None else "nan"]
             lines.append(" ".join(row))
         (gen / f"hpa-{wl}.csv").write_text("\n".join(lines) + "\n")
+    webdata.write(ROOT)
     print(f"H2 (elastic): {out['h2_elastic']['verdict']}; sustained: {out['sustained']}")
 
 

@@ -51,6 +51,7 @@ button:hover, select:hover { background: var(--wash); }
 .seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
 .grid { display: grid; gap: 16px; grid-template-columns: repeat(12, minmax(0, 1fr)); }
 .card { background: var(--surface); border: 1px solid var(--ring); border-radius: 12px; padding: 16px; grid-column: span 12; min-width: 0; }
+.full { grid-column: span 12; }
 .half { grid-column: span 6; }
 .third { grid-column: span 4; }
 .quarter { grid-column: span 3; }
@@ -119,11 +120,14 @@ th { color: var(--ink-2); font-weight: 600; }
 <script>
 "use strict";
 const DATA = window.CROSSOVER || {};
+const DATA_HPA = window.CROSSOVER_HPA || {};
 const CFG = { A: "Monolith", B: "Coarse, 4 services", C: "Fine, 8 services", D: "Fine + Istio mesh" };
 const CFG_COLOR = { A: "--s1", B: "--s2", C: "--s3", D: "--s4" };
 const LAYERS = [["app", "Application"], ["db", "Database"], ["ser", "Serialisation"], ["net", "Inter-service network"], ["oth", "Framework dispatch"], ["edge", "Edge (client ↔ service)"]];
 const LAYER_COLOR = ["--s1", "--s2", "--s3", "--s4", "--s5", "--s6"];
-const ENV = { kind: "Local cluster · equal CPU", "kind-prop": "Local cluster · proportional CPU", eks: "AWS EKS · equal CPU" };
+const ENV = { kind: "Local cluster · equal CPU", "kind-prop": "Local cluster · proportional CPU", eks: "AWS EKS · equal CPU",
+  "kind-work": "Local · 1 ms CPU per operation · equal CPU", "kind-work-prop": "Local · 1 ms CPU per operation · proportional CPU",
+  "eks-hpa": "AWS EKS · autoscaling" };
 const WL = { browse: "Browse (read, shallow)", checkout: "Checkout (write, deep)" };
 const PCT = ["p50", "p95", "p99"];
 const HYP = {
@@ -358,7 +362,45 @@ function hypothesisEvidence(k, h) {
   return h.rule || "";
 }
 
+// ---------------------------------------------------------------- autoscaling environments
+function renderHPA() {
+  const H = DATA_HPA[state.env], a = H.args || {}, cfgs = H.configs;
+  const app = $("#app");
+  app.replaceChildren();
+  $("#nodata").hidden = true;
+  const rows = c => H.ramp[c]?.[state.wl] || [];
+  $("#meta").textContent = `${ENV[state.env] || state.env} · ${Math.max(0, ...cfgs.flatMap(c => rows(c).map(r => r.reps)))} repetitions × ${cfgs.length} configurations · `
+    + `${a.ramp_step ?? "?"} s per level, last ${H.window_s} s measured · p99 target ${a.slo_ms ?? "—"} ms · shared CPU ceiling ${fmt((a.cpu_cap || 0) / 1000)} cores`;
+  const h = H.h2_elastic || {};
+  const c = el("section", { class: "card third hyp" }, app);
+  el("h2", { text: "H2 under autoscaling" }, c);
+  c.appendChild(statusBadge(h.verdict));
+  const wins = (h.wins || []).filter(w => w.workload === state.wl), cheaper = (h.cheaper || []).filter(w => w.workload === state.wl);
+  el("p", { class: "evidence", text: wins.length || cheaper.length
+    ? [...wins.map(w => `${w.config} sustained ${w.sustained} req/s, A ${w.sustained_A}.`), ...cheaper.map(w => `${w.config} sustained ${w.rate} req/s with ${fmt(w.cpu)} cores requested, A with ${fmt(w.cpu_A)}.`)].join(" ")
+    : "No decomposed configuration sustained a higher rate than the monolith, or the same rate with less requested CPU." }, c);
+  const d = el("details", {}, c); el("summary", { text: "Rule" }, d); el("p", { text: h.rule || "" }, d);
+  card("third", "Highest sustained rate", "A level counts as sustained when at most 5% of requests failed, throughput reached 90% of the rate and p99 met the target, in every repetition.",
+    b => table(b, ["Config", "Browse (req/s)", "Checkout (req/s)"], cfgs.map(x => [`${x} · ${CFG[x]}`, H.sustained[x]?.browse ?? "—", H.sustained[x]?.checkout ?? "—"])));
+  card("half", "Tail latency as load rises", "p99 in the measured window of each level (median across repetitions, bars: range). A line ends where the level was not sustained.",
+    b => { legend(b, cfgs.map(x => ({ label: `${x} · ${CFG[x]}`, color: CFG_COLOR[x] })));
+      lineChart(b, { series: cfgs.map(x => ({ key: x, label: CFG[x], color: CFG_COLOR[x], points: rows(x).map(r => r.sat > 0 ? { x: r.rate, y: null, note: "not sustained" } : { x: r.rate, y: r.p99, lo: r.p99_lo, hi: r.p99_hi }) })),
+        xTitle: "Offered load (req/s)", yTitle: "p99 (ms)", yUnit: " ms" }); },
+    b => table(b, ["Rate (req/s)", ...cfgs.map(x => `${x} p99 (ms)`)], [...new Set(cfgs.flatMap(x => rows(x).map(r => r.rate)))].sort((p, q) => p - q)
+      .map(rate => [rate, ...cfgs.map(x => { const r = rows(x).find(y => y.rate === rate); return r ? (r.sat > 0 ? "not sustained" : fmt(r.p99)) : "—"; })])));
+  card("half", "CPU requested by the autoscaler", "CPU requested by all pods of the configuration at the end of each level. The ceiling is the namespace quota shared by every configuration.",
+    b => { legend(b, cfgs.map(x => ({ label: `${x} · ${CFG[x]}`, color: CFG_COLOR[x] })));
+      lineChart(b, { series: cfgs.map(x => ({ key: x, label: CFG[x], color: CFG_COLOR[x], points: rows(x).map(r => ({ x: r.rate, y: r.quota_used_m == null ? null : r.quota_used_m / 1000 })) })),
+        xTitle: "Offered load (req/s)", yTitle: "CPU requested (cores)", yUnit: " cores", yLog: false }); },
+    b => table(b, ["Rate (req/s)", ...cfgs.map(x => `${x} cores`)], [...new Set(cfgs.flatMap(x => rows(x).map(r => r.rate)))].sort((p, q) => p - q)
+      .map(rate => [rate, ...cfgs.map(x => { const r = rows(x).find(y => y.rate === rate); return r && r.quota_used_m != null ? fmt(r.quota_used_m / 1000) : "—"; })])));
+  card("full", "Replicas at the end of each level", "Median replica count per service across repetitions.",
+    b => table(b, ["Config", "Rate (req/s)", "Replicas by service"], cfgs.flatMap(x => rows(x).map(r => [`${x} · ${CFG[x]}`, r.rate,
+      Object.entries(r.replicas_by_service || {}).map(([k, v]) => `${k} ${fmt(v)}`).join(", ") || "—"]))));
+}
+
 function render() {
+  if (DATA_HPA[state.env]) return renderHPA();
   const S = DATA[state.env];
   const app = $("#app");
   app.replaceChildren();
@@ -511,6 +553,7 @@ function seg(host, options, key, labels = {}) {
 }
 function syncRates() {
   const S = DATA[state.env]; const sel = $("#f-rate");
+  sel.closest("label").hidden = !!DATA_HPA[state.env];  // ramps have their own levels
   const rates = S ? [...new Set(S.configs.flatMap(c => (S.open[c]?.[state.wl] || []).map(r => r.rate)))].sort((a, b) => a - b) : [];
   if (!rates.includes(state.rate)) state.rate = rates[0];
   sel.replaceChildren(...rates.map(r => el("option", { value: r, text: `${r} req/s` })));
@@ -521,7 +564,7 @@ function build() {
   seg($("#f-pct"), PCT, "pct");
   render();
 }
-const envs = Object.keys(DATA).sort((a, b) => (a in ENV ? Object.keys(ENV).indexOf(a) : 99) - (b in ENV ? Object.keys(ENV).indexOf(b) : 99));
+const envs = [...Object.keys(DATA), ...Object.keys(DATA_HPA)].sort((a, b) => (a in ENV ? Object.keys(ENV).indexOf(a) : 99) - (b in ENV ? Object.keys(ENV).indexOf(b) : 99));
 state.env = envs[0];
 $("#f-env").replaceChildren(...envs.map(e => el("option", { value: e, text: ENV[e] || e })));
 $("#f-env").addEventListener("change", e => { state.env = e.target.value; syncRates(); build(); });
