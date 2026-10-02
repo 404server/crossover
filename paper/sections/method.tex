@@ -91,7 +91,10 @@ receives the same total CPU: \xo{appcpu} cores for the application tier and \xo{
 database tier, split equally across its pods as Kubernetes requests equal to limits (Guaranteed QoS).
 The split is deliberately naive. It is what a team gets by dividing a node pool evenly, and it exposes an
 effect that proportional allocation would hide: in Config~C, the four modules that browse does not touch
-keep half of the application budget idle. Section~\ref{sec:discussion} returns to this point.
+keep half of the application budget idle. Section~\ref{sec:discussion} returns to this point. Setting limits
+equal to requests makes each pod's share a hard ceiling enforced by CFS. Many operators run services with
+requests only, so that pods borrow idle CPU on their node; the throttling effects reported here are specific to
+hard limits, and Section~\ref{sec:threats} discusses what changes without them.
 
 Memory is not split equally. A Spring Boot process needs roughly 300\,MiB of resident memory at idle, so an
 equal split of 4\,GiB over eight services (512\,MiB each) left the edge service open to kernel OOM kills under

@@ -21,7 +21,12 @@ checked for identical responses, so implementation differences are excluded by c
 fresh deployment and the configuration order is shuffled per repetition, which guards against drift of the
 host. Three settings of the stack were changed from their defaults after calibration: a 1\,GiB memory floor per
 application pod, a cap of 1{,}000 connections per Tomcat process, and server-side keep-alive without a request
-limit. Each applies to all configurations and is documented with its reason in Section~\ref{sec:budget}. The equal CPU split is a deliberate choice, not the only defensible one: an operator
+limit. Each applies to all configurations and is documented with its reason in Section~\ref{sec:budget}. The budget is enforced as hard per-pod limits. Without limits, a decomposed configuration's busy edge service
+could borrow the CPU its idle neighbours leave unused, so the fragmentation penalty under the equal split would
+shrink, while the per-request CPU cost of distribution would remain. With the CPU per request of
+Table~\ref{tab:cost} (\xo{cpumsref/browse/C/total} against \xo{cpumsref/browse/A/total}\,ms for browse), even a
+pooled six-core budget would serve C less than half as many requests as the monolith. The equal CPU split is a deliberate choice, not
+the only defensible one: an operator
 who sizes each service to its demand would give the edge service of~C more than half a core. The results on
 fragmentation (Section~\ref{sec:results}) are therefore results about equal static allocation. The two further
 treatments of Section~\ref{sec:treatments} test the alternatives. Each has its own bias. The proportional shares are
