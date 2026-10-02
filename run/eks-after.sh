@@ -19,8 +19,10 @@ exec caffeinate -dimsu bash -c '
       --scaling-config minSize=1,maxSize=3,desiredSize=3
     for i in $(seq 90); do [ "$(kubectl get nodes -l crossover/role=sut --no-headers | grep -c " Ready")" -ge 4 ] && break; sleep 20; done
     kubectl get nodes -l crossover/role=sut --no-headers
+    # 3.5-core replicas so that two fit an 8-core node; a 4-core database tier so that the database of the monolith is not the
+    # first limit; namespace quota 3 x 3.5 + 4 = 14.5 cores for every configuration.
     python3 campaign.py --env eks-hpa --ramp --hpa 24 --configs A,B,C --reps 3 --alloc alloc-prop.json \
-      --image "$reg/crossover:1.0" --loadgen-image "$reg/crossover-loadgen:1.0"
+      --app-cpu 3500 --db-cpu 4000 --image "$reg/crossover:1.0" --loadgen-image "$reg/crossover-loadgen:1.0"
     echo "$(date +%H:%M:%S) autoscaling campaign exited with $?"
   else
     echo "$(date +%H:%M:%S) run/hpa.ready missing: skipping the autoscaling treatment"

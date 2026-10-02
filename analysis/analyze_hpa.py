@@ -3,8 +3,10 @@
 
     .venv/bin/python analysis/analyze_hpa.py --env eks-hpa
 
-Each ramp level is held for ramp_step seconds; its latency and throughput are taken from the last
-`--window` seconds, after the autoscaler has had time to react. Writes results/<env>/hpa.json,
+Each ramp level is held for ramp_step seconds and only its last ramp_window seconds are recorded, after the
+autoscaler has had time to react. A level is sustained if, in that window, at most 5% of requests failed,
+throughput reached 90% of the offered rate and p99 met the SLO (slo_ms). Two measures are compared under the
+shared CPU quota: the highest sustained rate, and the CPU requested by all pods at each rate. Writes results/<env>/hpa.json,
 paper/generated/<env>/hpa-<workload>.csv and \\xodef numbers (prefixed hpa/) appended to
 paper/generated/<env>/numbers-hpa.tex.
 """
@@ -22,7 +24,7 @@ from analyze import ROOT, WORKLOADS, clean, fmt, incidents, load_step
 ERR_MAX = 0.05
 
 
-def window_stats(path, rate, window):
+def window_stats(path, rate, window, slo_ms):
     s = load_step(path)
     t_end = s["t"].max()
     keep = s["t"] >= t_end - window          # steady state: the last `window` seconds of sends
@@ -31,7 +33,7 @@ def window_stats(path, rate, window):
     thr = ok.sum() / span
     err = 1 - ok.mean() if len(ok) else 1.0
     return {"p50": float(np.percentile(lat, 50)), "p99": float(np.percentile(lat, 99)), "thr": float(thr), "err": float(err),
-            "saturated": bool(err > ERR_MAX or thr < 0.9 * rate), "n": int(len(lat))}
+            "saturated": bool(err > ERR_MAX or thr < 0.9 * rate or np.percentile(lat, 99) > slo_ms), "n": int(len(lat))}
 
 
 def scaling(cell):
@@ -61,7 +63,7 @@ def millicores(q):
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--env", default="eks-hpa")
-    p.add_argument("--window", type=int, default=60)
+    p.add_argument("--window", type=int, help="seconds analysed per level (default: the recorded ramp_window)")
     a = p.parse_args()
     raw = ROOT / "results" / "raw" / a.env
     rows = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict(list)))
@@ -71,6 +73,9 @@ def main():
             continue
         cfg = cell.name
         meta = meta or json.loads((cell / "meta.json").read_text())
+        args = meta["args"]
+        a.window = a.window or args.get("ramp_window", 60)
+        slo = args.get("slo_ms", 2000)  # runs before the SLO existed stopped at a p99 of 2 s
         bad = incidents(cell)
         sc = scaling(cell)
         for wl in WORKLOADS:
@@ -79,7 +84,7 @@ def main():
                 step = f"{wl}/ramp/{rate}"
                 if step in bad:
                     continue
-                st = window_stats(f, rate, a.window)
+                st = window_stats(f, rate, a.window, slo)
                 st.update(sc.get(step, {}))
                 rows[cfg][wl][rate].append(st)
     if not rows:
@@ -103,6 +108,7 @@ def main():
                                "replicas_by_service": {k: float(np.median([x.get("replicas", {}).get(k, math.nan) for x in st]))
                                                        for k in (st[0].get("replicas") or {})},
                                "quota_used_m": float(np.median([millicores(x.get("quota_used")) or math.nan for x in st])),
+                               "quota_used_all": [millicores(x.get("quota_used")) for x in st],
                                "settled_s": float(np.median([x.get("settled_s") if x.get("settled_s") is not None else math.nan for x in st]))})
             for r in series:  # highest rate with no saturated repetition at it or any lower rate
                 if r["sat"] > 0:
@@ -121,16 +127,31 @@ def main():
             x_sus = out["sustained"].get(cfg, {}).get(wl)
             if a_sus is not None and x_sus is not None and x_sus > a_sus:
                 wins.append({"workload": wl, "config": cfg, "sustained": x_sus, "sustained_A": a_sus})
-    out["h2_elastic"] = {"verdict": "supported" if wins else "falsified", "wins": wins,
-                         "rule": "supported if a decomposed configuration sustains a higher offered rate than the monolith "
-                                 "under the same autoscaling ceiling"}
+    # efficiency: at a rate both sustained in every repetition, did X request less CPU than A in every repetition?
+    cheaper = []
+    for wl in WORKLOADS:
+        by_rate = lambda c: {r["rate"]: r for r in out["ramp"].get(c, {}).get(wl, []) if r["sat"] == 0}
+        a_rows = by_rate("A")
+        for cfg in out["configs"]:
+            if cfg == "A":
+                continue
+            for rate, r in sorted(by_rate(cfg).items()):
+                ra = a_rows.get(rate)
+                xs, as_ = [q for q in r["quota_used_all"] if q], [q for q in (ra or {}).get("quota_used_all", []) if q]
+                if ra and xs and as_ and max(xs) < min(as_):
+                    cheaper.append({"workload": wl, "config": cfg, "rate": rate, "cpu": max(xs) / 1000, "cpu_A": min(as_) / 1000})
+    out["h2_elastic"] = {"verdict": "supported" if wins or cheaper else "falsified", "wins": wins, "cheaper": cheaper,
+                         "rule": "supported if, under the same CPU quota, a decomposed configuration sustains a higher offered "
+                                 "rate than the monolith, or sustains a rate the monolith also sustains while requesting less CPU "
+                                 "in every repetition"}
     out = clean(out)
     (ROOT / "results" / a.env).mkdir(parents=True, exist_ok=True)
     (ROOT / "results" / a.env / "hpa.json").write_text(json.dumps(out))
 
     gen = ROOT / "paper" / "generated" / a.env
     gen.mkdir(parents=True, exist_ok=True)
-    nums = {"hpa/verdict": out["h2_elastic"]["verdict"], "hpa/window": a.window,
+    nums = {"hpa/verdict": out["h2_elastic"]["verdict"], "hpa/window": a.window, "hpa/slo": fmt(slo),
+            "hpa/cheaper": len(out["h2_elastic"]["cheaper"]),
             "hpa/step": out["args"].get("ramp_step", "--"), "hpa/cap": fmt((out["args"].get("cpu_cap") or 0) / 1000, 2),
             "hpa/reps": max((r["reps"] for c in out["ramp"].values() for s in c.values() for r in s), default=0)}
     for cfg in out["configs"]:
