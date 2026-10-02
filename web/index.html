@@ -123,6 +123,7 @@ const CFG = { A: "Monolith", B: "Coarse, 4 services", C: "Fine, 8 services", D: 
 const CFG_COLOR = { A: "--s1", B: "--s2", C: "--s3", D: "--s4" };
 const LAYERS = [["app", "Application"], ["db", "Database"], ["ser", "Serialisation"], ["net", "Inter-service network"], ["oth", "Framework dispatch"], ["edge", "Edge (client ↔ service)"]];
 const LAYER_COLOR = ["--s1", "--s2", "--s3", "--s4", "--s5", "--s6"];
+const ENV = { kind: "Local cluster · equal CPU", "kind-prop": "Local cluster · proportional CPU", eks: "AWS EKS · equal CPU" };
 const WL = { browse: "Browse (read, shallow)", checkout: "Checkout (write, deep)" };
 const PCT = ["p50", "p95", "p99"];
 const HYP = {
@@ -364,7 +365,7 @@ function render() {
   if (!S) { $("#nodata").hidden = false; return; }
   $("#nodata").hidden = true;
   const M = S.meta, cfgs = S.configs;
-  $("#meta").textContent = `${S.env} · Kubernetes ${M.k8s || "?"} · ${M.nodes.length} nodes · ${M.reps} repetition${M.reps > 1 ? "s" : ""} × ${cfgs.length} configurations · `
+  $("#meta").textContent = `${ENV[S.env] || S.env} · Kubernetes ${M.k8s || "?"} · ${M.nodes.length} nodes · ${M.reps} repetition${M.reps > 1 ? "s" : ""} × ${cfgs.length} configurations · `
     + `budget ${M.budget.app_cpu / 1000} CPU app + ${M.budget.db_cpu / 1000} CPU db · ${M.open_step_s}s open-loop / ${M.closed_step_s}s closed-loop steps · ${M.started} → ${M.finished} (${fmt(M.hours)} h)`;
   if (M.reps < 3) el("p", { class: "notice card", text: `Only ${M.reps} repetition${M.reps > 1 ? "s" : ""} in this environment: spreads are ranges, not confidence intervals, and verdicts are provisional.` }, app);
 
@@ -374,7 +375,7 @@ function render() {
     const c = el("section", { class: "card third hyp" }, app);
     el("h2", { text: k }, c);
     c.appendChild(statusBadge(h.verdict));
-    el("p", { class: "claim", text: HYP[k] }, c);
+    el("p", { class: "claim", text: k === "H2" && M.alloc && M.alloc !== "equal" ? HYP.H2.replace("an equal resource budget", "demand-proportional CPU allocation") : HYP[k] }, c);
     el("p", { class: "evidence", text: hypothesisEvidence(k, h) }, c);
     const d = el("details", {}, c); el("summary", { text: "Falsification rule" }, d); el("p", { text: h.rule || "" }, d);
   }
@@ -513,9 +514,9 @@ function build() {
   seg($("#f-pct"), PCT, "pct");
   render();
 }
-const envs = Object.keys(DATA).filter(e => e !== "calib").concat(Object.keys(DATA).filter(e => e === "calib"));
+const envs = Object.keys(DATA).sort((a, b) => (a in ENV ? Object.keys(ENV).indexOf(a) : 99) - (b in ENV ? Object.keys(ENV).indexOf(b) : 99));
 state.env = envs[0];
-$("#f-env").replaceChildren(...envs.map(e => el("option", { value: e, text: e })));
+$("#f-env").replaceChildren(...envs.map(e => el("option", { value: e, text: ENV[e] || e })));
 $("#f-env").addEventListener("change", e => { state.env = e.target.value; syncRates(); build(); });
 $("#f-rate").addEventListener("change", e => { state.rate = +e.target.value; render(); });
 // Chart colours are resolved when drawn, so redraw when the viewer switches theme.
