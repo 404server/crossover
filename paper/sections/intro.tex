@@ -1,23 +1,25 @@
 \section{Introduction}
 \label{sec:intro}
 
-In 2023 the Prime Video engineering team reported that moving an audio/video monitoring service from a
-distributed design built on serverless components into a single process ``reduced our infrastructure cost by
-over 90\%'' and increased its scaling capabilities~\cite{Kolny2023}. Su et al.\ analyse this case as one of four
-documented moves from microservices back to a monolith, with cost, complexity, scalability, performance and
-organisation as the recurring reasons~\cite{Su2024}. Such reports do not settle whether decomposition is a
-good idea. They do show that the performance side of the decision is still argued from individual cases.
+A team that runs an application on Kubernetes decides how to cut it into deployable units, and with that how a
+fixed share of a node pool or a CPU quota is divided among processes. The argument for microservices is that a
+decomposed system can give resources to the part that needs them. The argument against is that every remote call
+costs time and CPU. Migrations in both directions keep the question open. The Prime Video team moved a monitoring
+service from a distributed design into a single process and reported that this ``reduced our infrastructure cost
+by over 90\%''~\cite{Kolny2023}, and Su et al.\ analyse four such moves back to a monolith~\cite{Su2024}.
 
-The published comparisons do not settle it either. Reviews of the literature on monolith-to-microservice
-migration find conflicting results~\cite{Rodrigues2024} and a lack of comparative studies of architectural
-styles~\cite{RodriguesJSS2025}. Much of the disagreement can be traced to method. Most comparisons report
-throughput or mean response time rather than the latency distribution. Many use closed-loop load generators,
-which slow down with the system they measure and so hide the tail~\cite{Schroeder2006,Tene2015}. None that we know
-of splits end-to-end latency into the layers where distribution adds cost. And the resources given to each
-architecture are rarely held equal or even reported, although a microservice deployment of the same code runs
-more processes, each with its own runtime, connection pools and share of the CPU.
+The published comparisons agree more than they appear to. Where both styles run on the same hardware, the
+monolith is mostly faster or equal; the microservice version comes out ahead when it receives more instances or
+other resources (Section~\ref{sec:related}). What the comparisons rarely show is how large the gap is and where it
+comes from. Most report throughput or mean response time rather than the latency distribution. Many use
+closed-loop load generators, which slow down with the system they measure and so hide the
+tail~\cite{Schroeder2006,Tene2015}. None that we know of splits end-to-end latency into the layers where
+distribution adds cost. And the resources given to each architecture are rarely held equal or even reported,
+although a microservice deployment of the same code runs more processes, each with its own runtime, connection
+pools and share of the CPU. Reviews of the migration literature accordingly describe its results as
+conflicting~\cite{Rodrigues2024} and note a lack of comparative studies~\cite{RodriguesJSS2025}.
 
-This article reports a controlled comparison designed around those four problems. It implements and executes a
+This article reports a controlled comparison designed around those problems. It implements and executes a
 measurement protocol we presented earlier\footnote{As a talk at a university conference at the Kazakh-British
 Technical University, 2026, without published proceedings. \textbf{[TODO(author): conference name and date.]}},
 and it revises that protocol where building it showed parts of it to be unsound. The testbed runs one e-commerce application in four topologies: a monolith (A), four
@@ -47,16 +49,18 @@ condition (Section~\ref{sec:hypotheses}).
 
 The contributions are:
 \begin{enumerate}
-\item a testbed design in which configurations differ only in deployment topology, run under an equal CPU budget,
-and are checked for identical responses on every deployment;
-\item a per-layer latency accounting based on \texttt{Server-Timing} that assigns every millisecond of end-to-end
-latency to one layer and needs no clock synchronisation, together with cgroup-level CPU and throttling data that
-explain the capacity limits;
-\item measurements from \xo{cells} fresh deployments on a local cluster and \xo{eks/cells} on Amazon EKS,
-analysed with the repetition as the unit of replication. They test H1--H3 and locate (or rule out) the crossover
-under an equal budget, under demand-proportional allocation and under autoscaling;
-\item the testbed, campaign runner, raw data, analysis pipeline and an interactive dashboard, from which every
-number in this article is generated.
+\item a testbed in which configurations differ only in deployment topology: one binary whose modules are placed in
+one process or several at deployment time, as in Service Weaver~\cite{Ghemawat2023}, run under an equal CPU budget
+and checked for identical responses on every deployment;
+\item a per-layer latency accounting that aggregates caller- and callee-side timings in-band, in one
+\texttt{Server-Timing} header per hop, together with cgroup-level CPU and throttling data and an operational
+bottleneck bound that explain the capacity limits;
+\item measurements from \xo{cells} fresh deployments on a local cluster and \xo{eks/cells} on Amazon EKS, under an
+equal, a demand-proportional and an autoscaled allocation, analysed with the repetition as the unit of
+replication. They test H1--H3 and put a price on each synchronous hop;
+\item the software defaults that bias such comparisons and how the testbed neutralises them (Section~\ref{sec:discussion}),
+and the testbed, campaign runner, raw data, analysis pipeline and an interactive dashboard, from which every number
+in this article is generated.
 \end{enumerate}
 
 Section~\ref{sec:background} explains the mechanisms by which distribution costs time and the models used to

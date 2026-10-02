@@ -20,16 +20,7 @@ gaps~\cite{AlQoran2025}. Faustino et al.\ migrated one system step by step from 
 modular monolith and then to microservices, measuring performance and migration effort at each
 step, and observed performance costs already at the modular-monolith step~\cite{Faustino2024}.
 
-The direction of migration is not only one way. Su et al.\ analysed four documented cases of
-switching back from microservices to a monolith (the Istio control plane, the Amazon Prime Video
-monitoring service, Segment and InVision) and identified cost, complexity, scalability, performance
-and organisation as the recurring reasons~\cite{Su2024}. In the Prime Video case, the original design was a distributed system built on serverless components (AWS Step
-Functions and AWS Lambda, with video frames exchanged through Amazon S3), which reached a hard
-scaling limit at about 5\% of the expected load. The team rebuilt it as a single process deployed
-on Amazon EC2 and ECS and reported that the move ``reduced our infrastructure cost by over
-90\%''~\cite{Kolny2023}. The case therefore concerns serverless orchestration, not
-container-hosted microservices, and it says little directly about the Kubernetes deployments
-studied here.
+
 
 In this paper the three styles differ in one respect only: the mapping of modules to processes.
 The business code is the same in every configuration (Section~\ref{sec:testbed}).
@@ -40,10 +31,8 @@ The business code is the same in every configuration (Section~\ref{sec:testbed})
 When a module call leaves its process, several costs appear that an in-process call does not pay.
 Arguments and results are serialised and parsed, here as JSON. The bytes travel over TCP, and
 through TLS if the connection is encrypted. Both ends run an HTTP stack. In Kubernetes, the
-destination is a service virtual IP that kube-proxy rules translate to a pod address, and the
-pod network is implemented by a Container Network Interface (CNI) plugin. Qi et al.\ compared CNI
-plugins and traced their overheads to the packet datapath, the iptables processing and the host
-network stack, with overlay offload mattering for traffic between hosts~\cite{Qi2021}.
+destination is a service virtual IP that kube-proxy rules translate to a pod address, over a pod network whose
+overheads depend on the CNI plugin~\cite{Qi2021}.
 
 A sidecar service mesh adds two proxies to every hop: the caller's outbound sidecar and the
 callee's inbound sidecar. Istio's published benchmarks, measured with HTTP/1.1, 1\,kB payloads,
@@ -53,21 +42,12 @@ and 0.25\,ms in Istio 1.22.3~\cite{Istio122Perf}. The overhead is therefore stro
 version-dependent. Zhu et al.\ found that sidecars raise end-to-end latency by 27\% to 269\% and
 CPU usage by 42\% to 163\%, depending on protocol mode and enabled filters; protocol parsing
 dominates in HTTP and gRPC mode, and inter-process communication and socket writes dominate in TCP
-mode~\cite{Zhu2023}. Bremler-Barr et al.\ measured the P99 cost of enforcing mutual TLS through
-four meshes, relative to a Kubernetes baseline without a mesh, at 3{,}200 requests per second over
-1{,}600 connections against a server that spends 200\,ms on each request: $+166\%$ for sidecar-based
-Istio, $+8\%$ for Istio Ambient, $+33\%$ for Linkerd and $+99\%$ for Cilium; at 12{,}800 requests
-per second sidecar Istio could not reach the target rate~\cite{BremlerBarr2025}. Because the server
-itself takes 200\,ms, these percentages describe queueing under load rather than a fixed cost per
-hop.
+mode~\cite{Zhu2023}. Bremler-Barr et al.\ compared the P99 cost of mutual TLS across four meshes under heavy load and found
+sidecar-based Istio far more expensive than Istio Ambient, Linkerd or Cilium~\cite{BremlerBarr2025}.
 
-Distribution also changes how latency is distributed. When a request fans out to several services,
-its latency is set by the slowest of them, so the tail of each component becomes the typical
-latency of the whole~\cite{Dean2013}. DeathStarBench quantified this for microservices: network
-processing took 36.3\% of execution time in its microservice Social Network application, against
-5\% to 20\% in single-tier services, and a mismanaged dependency worsened tail latency by $10.4\times$
-compared with the corresponding monolithic service~\cite{Gan2019}. Production traces from Alibaba
-show heavy-tailed call graphs with hot-spot services~\cite{Luo2021}.
+Distribution also changes how latency is distributed. A request that depends on several services
+inherits the tails of all of them, so the tail of each component weighs on the whole~\cite{Dean2013}, and
+production traces show heavy-tailed call graphs with hot-spot services~\cite{Luo2021}.
 
 \subsection{CPU limits and CFS bandwidth control}
 \label{sec:bg-cfs}
@@ -94,26 +74,18 @@ smaller per-service limits, so decomposition interacts with this mechanism direc
 
 Load generators follow one of two system models. In a closed system a fixed number $N$ of clients
 each wait for a response, and possibly a think time, before sending the next request. In an open
-system requests arrive at a rate $\lambda$ that does not depend on completions. Schroeder et al.\
+system requests arrive at a rate that does not depend on completions. Schroeder et al.\
 showed that the two models behave very differently and that the model must match the system being
 evaluated~\cite{Schroeder2006}.
 
 A closed-loop generator used to measure latency suffers from coordinated omission: when the system
 stalls, the generator stops sending, so it records one slow request instead of all the requests
 that real users would have issued during the stall, and the reported tail is too
-optimistic~\cite{Tene2015}. Constant-rate generators avoid this. wrk2 keeps a constant throughput
-and measures latency from the time each request was supposed to be sent~\cite{wrk2}; Vegeta, used
-in this study, issues requests at a constant rate regardless of response times~\cite{Vegeta}.
-Zhang et al.\ showed that design flaws in load testers and incorrect aggregation of measurements
-produce misleading tail-latency results~\cite{Zhang2016Treadmill}, and Kogias et al.\ built a
-latency tool that uses statistical tests to detect when a tail cannot be measured
-accurately~\cite{Kogias2019}.
-
-Little's law relates the two views: in any stable system the mean number of requests in the system
-equals the arrival rate times the mean time spent in it, $L = \lambda W$~\cite{Little1961}. In a
-closed loop with $N$ clients and no think time this becomes $N = X R$, where $X$ is throughput and
-$R$ the mean response time. A closed loop is the natural way to measure throughput as a function
-of concurrency; its latency percentiles are not used in this study.
+optimistic~\cite{Tene2015}. Constant-rate generators avoid this. wrk2 measures latency from the time each request was
+scheduled~\cite{wrk2}. Vegeta, used in this study, issues requests at a constant rate regardless of response
+times and measures latency from the actual send~\cite{Vegeta}. Load testers have further pitfalls that distort
+tail measurements~\cite{Zhang2016Treadmill,Kogias2019}. A closed loop is the natural way to measure throughput as
+a function of concurrency; its latency percentiles are not used in this study.
 
 \subsection{The Universal Scalability Law}
 \label{sec:bg-usl}
@@ -135,10 +107,7 @@ $\beta > 0$, makes throughput peak at
   \label{eq:nstar}
 \end{equation}
 and decline beyond it. With $\alpha = \beta = 0$ scaling is linear. We write $\alpha$ and $\beta$
-for the coefficients that Gunther denotes $\sigma$ and $\kappa$~\cite{Gunther2007,Gunther2015}. Gunther et al.\ applied the
-USL to Hadoop TeraSort and obtained a negative contention coefficient, which signals superlinear
-scaling~\cite{Gunther2015}, and Heyman et al.\ combined a distributed load generator with USL
-analysis to study the scalability of an e-payment system~\cite{Heyman2014}.
+for the coefficients that Gunther denotes $\sigma$ and $\kappa$~\cite{Gunther2007}.
 
 Because Equation~\eqref{eq:usl}
 describes a closed system in which $N$ is the number of concurrent clients, this study fits it only

@@ -33,7 +33,7 @@
 \draw[br] (search.east) -- (stock.west);
 % checkout (dashed): Orders -> Auth, Profiles, Carts, Products, Reservations; Reservations -> Stock
 \draw[co] (orders.north) .. controls (8.2, 1.35) and (1.2, 1.35) .. (auth.north);
-\draw[co] (orders.south west) .. controls (7.6, -3.35) and (1.4, -3.35) .. (prof.south east);
+\draw[co] (orders.south west) .. controls (7.6, -4.2) and (1.4, -4.2) .. (prof.south east);  % clear of the group labels
 \draw[co] (orders.south) -- (carts.north);
 \draw[co] (orders.south west) .. controls (7.6, -0.75) and (4.6, -0.75) .. (prod.north east);
 \draw[co] (orders.south west) -- (resv.north east);
@@ -42,10 +42,10 @@
 \draw[-{Stealth[length=1.6mm]}, thick] (3.1, 1.15) node[above, font=\scriptsize] {client: browse} -- (search.north);
 \draw[-{Stealth[length=1.6mm]}, thick] (10.7, 0.9) node[above, font=\scriptsize] {client: checkout} -- (orders.north east);
 
-\draw[br] (0.2, -3.95) -- ++(0.7, 0) node[right, black, font=\scriptsize] {browse call};
-\draw[co] (3.2, -3.95) -- ++(0.7, 0) node[right, black, font=\scriptsize] {checkout call};
-\node[draw, dashed, rounded corners=3pt, black!55, minimum width=6mm, minimum height=3mm] at (6.55, -3.95) {};
-\node[right, font=\scriptsize] at (6.9, -3.95) {service in Config~B};
+\draw[br] (0.2, -4.45) -- ++(0.7, 0) node[right, black, font=\scriptsize] {browse call};
+\draw[co] (3.2, -4.45) -- ++(0.7, 0) node[right, black, font=\scriptsize] {checkout call};
+\node[draw, dashed, rounded corners=3pt, black!55, minimum width=6mm, minimum height=3mm] at (6.55, -4.45) {};
+\node[right, font=\scriptsize] at (6.9, -4.45) {service in Config~B};
 \end{tikzpicture}
 \caption{Module call graph. Shaded modules own the edge operations. In Config~A every arrow is an in-process
 call; in Config~B only arrows that leave a dashed box cross the network (browse: 2, checkout: 4); in

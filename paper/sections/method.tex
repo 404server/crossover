@@ -18,8 +18,6 @@ A call to a hosted module is a plain method call. A call to any other module goe
 serialises the arguments to JSON, sends \texttt{POST /rpc/\{Module\}/\{method\}} over HTTP/1.1 with
 keep-alive connections, and deserialises the result. Because every configuration runs the same binary with
 the same business code, a difference between configurations cannot come from a difference in implementation.
-This is a stronger form of the shared-library approach described in our earlier protocol, where equivalence
-had to be enforced by tests.
 
 \begin{table}[t]
 \caption{Configurations. All share one artifact; only the module-to-process mapping differs.
@@ -45,8 +43,7 @@ interfaces and own their tables, so it is a modular monolith in the sense of Sec
 style for which empirical performance data are scarce~\cite{AlQoran2025}. Config~B groups the modules into
 four services along domain lines, the grouping most teams would choose first. Config~C gives every module its own
 service. Config~D is C with an Istio~1.31 service mesh injected into every pod, including the database pods;
-it isolates the mesh as the single added variable. The earlier protocol's Config~D also added asynchronous
-messaging, which would have changed two variables at once; we dropped it for that reason. Every service has
+it isolates the mesh as the single added variable. Every service has
 its own PostgreSQL instance holding only the tables of its modules, so Config~A has one database and
 Configs~C and~D have eight. In~D, Istio runs with its default PERMISSIVE peer authentication and automatic
 mutual TLS, so every sidecar-to-sidecar connection, including those to databases, is encrypted; only the
@@ -134,19 +131,17 @@ network,
 \end{equation}
 which covers everything between the two processes: the HTTP client and server stacks, kernel networking,
 kube-proxy and, in Config~D, both sidecars. Both terms of~\eqref{eq:net} are differences of timestamps taken
-on one host, so no clock synchronisation is needed. This replaces the span-difference method of our earlier
-protocol, which subtracted timestamps taken on different nodes and depended on NTP or PTP accuracy. Remote calls
+on one host, so no clock synchronisation is needed. Remote calls
 within a request are made one after another, never in parallel, so the sum over calls is the time the caller spent
 waiting. Each process adds its callees' layers to its own, so the edge process reports
 $\mathit{tot} = \sum\mathit{app} + \sum\mathit{db} + \sum\mathit{ser} + \sum\mathit{net} + \sum\mathit{oth}$
 over the whole call tree. The load generator's observed latency minus the edge's $\mathit{tot}$ is the
 \emph{edge} layer: the client-to-edge network plus any time a request waits in the edge's accept queue.
-Every millisecond of end-to-end latency is thus assigned to exactly one of six layers. Because the layers
-add up exactly, the earlier protocol's reconciliation check (layers versus end-to-end within 5\%) is no longer
-informative; what can be checked is that each layer behaves plausibly, for instance that $\mathit{net}$ is zero
-in Config~A, which it was in every run. The probes cost about twenty \texttt{nanoTime} calls and one header of
-roughly 120 bytes per hop, well under a microsecond of CPU, whereas distributed-tracing agents have been measured
-to add up to 175\% latency~\cite{Nou2025}. The \texttt{calls} field counts remote calls over the call tree and
+Every millisecond of end-to-end latency is thus assigned to exactly one of six layers. Because the layers add up
+by construction, what can be checked is that each behaves plausibly; $\mathit{net}$, for instance, was zero in
+Config~A in every run. The probes cost about twenty \texttt{nanoTime} calls and one header of
+roughly 120 bytes per hop, well under a microsecond of CPU. A full tracing pipeline costs far more; with
+auto-instrumentation agents one study measured up to 175\% added latency~\cite{Nou2025}. The \texttt{calls} field counts remote calls over the call tree and
 was used to confirm Table~\ref{tab:hops}.
 
 \subsection{Functional equivalence}

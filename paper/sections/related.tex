@@ -4,18 +4,12 @@
 \subsection{Empirical comparisons of monoliths and microservices}
 \label{sec:rw-comparisons}
 
-Blinowski et al.\ implemented monolithic and microservice versions of a reference web application
-in Java (Spring Boot, with Spring Cloud components for the microservice variant) and in C\#
-(ASP.NET Core), and benchmarked them on a local workstation and on two Azure platforms, Azure
-Spring Cloud and Azure App Service~\cite{Blinowski2022}. Load came from Apache JMeter with a fixed
-pool of ten threads, which is a closed-loop workload, and throughput was the only performance
-metric. On a single machine the monolith achieved higher throughput: more than twice as many
-requests for the .NET version and 1.37 times as many for the Java version on a lightweight service,
-and only slightly more on a compute-heavy one. In the cloud the difference was not noticeable
-because the gateway ran on a separate virtual machine; vertical scaling was more cost-effective than
-horizontal scaling, and scaling out beyond a certain number of instances degraded performance. The
-authors describe the existing evidence as inconsistent. They report neither latency distributions
-nor a crossover point.
+Blinowski et al.\ benchmarked monolithic and microservice versions of a reference application in Java
+(Spring Boot) and C\# (ASP.NET Core) on a workstation and on two Azure platforms, with JMeter and a fixed pool of
+ten threads (a closed loop) and throughput as the only metric~\cite{Blinowski2022}. On one machine the monolith
+was faster, by more than $2\times$ for .NET and $1.37\times$ for Java on a lightweight service and only slightly
+on a compute-heavy one. In the cloud the difference vanished because the gateway ran on its own virtual machine,
+and scaling out beyond some number of instances degraded performance.
 
 Ueda et al.\ characterised monolithic and microservice versions of the Acme Air benchmark on
 Node.js and Java and found that, on identical hardware, the microservice version's performance
@@ -96,18 +90,12 @@ microservice applications.
 \subsection{Service-mesh overhead}
 \label{sec:rw-mesh}
 
-Measurements of mesh overhead come mostly from studies of the mesh itself.
-Section~\ref{sec:bg-costs} summarised Istio's own benchmarks~\cite{Istio110Perf,Istio122Perf}, the
-sidecar dissection by Zhu et al.~\cite{Zhu2023} and the mutual-TLS comparison by Bremler-Barr et
-al.~\cite{BremlerBarr2025}. Zhu et al.\ also built MeshInsight, which predicts the overhead a mesh
-adds to a given call graph; on Alibaba call graphs it estimated a median critical-path overhead of
-about 0.2\,ms in TCP mode and about 2\,ms in gRPC mode with filters, for Istio 1.13 and Envoy
-1.21~\cite{Zhu2023}. Song et al.\ used production data from Alibaba to quantify per-pod sidecar
-overhead and proposed Canal Mesh, a centralised sidecar-free design that outperformed Istio and
-Istio Ambient in their evaluation~\cite{Song2024}. Saleh Sedghpour et al.\ ran more than 1{,}000
-experiments with Istio 1.11.2 on Kubernetes 1.19 and Online Boutique and showed that
-circuit-breaker and retry settings strongly affect response time and throughput under overload, and
-that poorly tuned combinations can trigger retry storms~\cite{SalehSedghpour2022}. These studies
+Measurements of mesh overhead come mostly from studies of the mesh itself (Section~\ref{sec:bg-costs}). Zhu et
+al.'s MeshInsight predicts the overhead a mesh adds to a call graph and estimated a median critical-path overhead
+of about 0.2\,ms in TCP mode and 2\,ms in gRPC mode on Alibaba call graphs~\cite{Zhu2023}. Song et al.\ quantified
+per-pod sidecar overhead in production and proposed a centralised sidecar-free design~\cite{Song2024}, and Saleh
+Sedghpour et al.\ showed that circuit-breaker and retry settings strongly affect a meshed application under
+overload~\cite{SalehSedghpour2022}. These studies
 compare meshes with each other or with no mesh on a fixed application. To our knowledge, none
 places mesh overhead inside a monolith-versus-microservice comparison and relates it to the number
 of hops per request.
@@ -115,13 +103,9 @@ of hops per request.
 \subsection{Performance-evaluation methodology}
 \label{sec:rw-method}
 
-Papadopoulos et al.\ proposed eight methodological principles for reproducible performance
-evaluation in cloud computing and found that few studies at top venues follow
-them~\cite{Papadopoulos2021}. Cloud
-measurements vary considerably: Laaber et al.\ observed coefficients of variation from 0.03\% to
-over 100\% for microbenchmarks, depending on benchmark and instance type~\cite{Laaber2019}, and
-Leitner and Cito found that multitenancy affects the predictability of some IaaS
-providers~\cite{Leitner2016}. Eismann et al.\ showed that establishing reliable performance
+Papadopoulos et al.\ proposed eight principles for reproducible performance evaluation in cloud computing and
+found that few studies follow them~\cite{Papadopoulos2021}. Cloud measurements vary considerably with benchmark,
+instance type and tenancy~\cite{Laaber2019,Leitner2016}. Eismann et al.\ showed that establishing reliable performance
 baselines is difficult for microservice applications, using TeaStore as their
 subject~\cite{Eismann2020}. Kalibera and Jones showed that benchmark results vary at more than one
 level of repetition, for example between iterations within a process and between processes, and

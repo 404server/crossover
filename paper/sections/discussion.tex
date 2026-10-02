@@ -56,22 +56,31 @@ Sidecar-less data planes are reported to reduce the overhead substantially~\cite
 measured in the same way before they are adopted for performance reasons.
 
 \paragraph{Prefer coarse decomposition when decomposing for other reasons.} Organisational and deployment
-benefits are legitimate reasons to split a system~\cite{Su2024}. When they are the reason, our data favour the
-coarsest split that achieves them. Under the equal split B reached
+benefits are legitimate reasons to split a system~\cite{Su2024}. When they are the reason, our data favour the coarsest split that achieves them, and they put numbers on
+the known advice against services that are too small~\cite{Taibi2018}. Under the equal split B reached
 \xo{peakratio/browse/B}--\xo{peakratio/checkout/B} of the monolith's capacity and C and D about a tenth or less.
 With proportional allocation B reached \xo{prop/peakratio/checkout/B}--\xo{prop/peakratio/browse/B} and C and D
 about 0.3.
 
-\subsection{The protocol, revisited}
+\subsection{Lessons for testbed builders}
 
-Building the protocol changed it. The original latency decomposition subtracted span timestamps from different
-hosts and therefore depended on clock synchronisation; the \texttt{Server-Timing} accounting does not, and it
-assigns every millisecond to exactly one layer. The original planned to fit the USL to open-loop data, a model of a
-closed system applied to an open one; the study now uses each load model for what it measures. The original
-Config~D changed two variables at once. And several defaults of the software stack turned out to matter for a fair
-comparison: the garbage collector the JVM selects under small CPU limits, per-pod memory limits that are too small
-for a JVM, unbounded concurrency that turns overload into OOM kills, and keep-alive races between client and server.
-These are reported because others building such testbeds will meet them.
+Building the protocol changed it. The original latency decomposition subtracted span timestamps taken on different
+hosts and therefore depended on clock synchronisation; the in-band accounting does not. The original planned to fit
+the USL to open-loop data, a model of a closed system applied to an open one. Its mesh configuration also added
+asynchronous messaging, which would have changed two variables at once. Beyond the protocol, several defaults of
+the software stack bias a comparison of this kind, and others building such testbeds will meet them:
+\begin{itemize}
+\item The JVM chooses its garbage collector from the CPU limit, so under an equal split the fine-grained services
+got the serial collector and the monolith G1. The collector must be pinned.
+\item A Spring Boot JVM needs about 300\,MiB at idle. An equal memory split leaves small services open to OOM kills
+under overload, so memory needs a floor and is better reported as a cost than equalised.
+\item Unbounded concurrency (virtual threads, unlimited connections) turns overload into memory growth and OOM
+kills. Bounding it makes overload queue in the kernel instead.
+\item The JDK HTTP client does not retry a POST that races with a server-side connection close, so servers must not
+close keep-alive connections after a request limit during measurement.
+\item Against a remote cluster, \texttt{kubectl exec} streams can end before all output has arrived without
+reporting an error. Every transferred result file must be checked.
+\end{itemize}
 
 \subsection{Future work}
 
