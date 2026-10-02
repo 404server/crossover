@@ -22,3 +22,4 @@ notes/*
 zenodo/
 run/hpa.ready
 **/kind-hpa-smoke/
+.bibverify-cache.sqlite3
