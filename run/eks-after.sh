@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Takes over from eks-run.sh: waits for the running EKS campaign to finish, then, if run/hpa.ready
-# exists (the autoscaling mode was tested), adds capacity and runs the autoscaling treatment.
+# exists (the autoscaling mode was tested), adds SUT nodes and runs the autoscaling treatment.
 # Whatever happens, the cluster is deleted at the end so it cannot keep billing. Usage:
 #   nohup run/eks-after.sh <pid of the running campaign> >> results/eks-hpa.log 2>&1 &
 cd "$(dirname "$0")"
@@ -13,7 +13,12 @@ exec caffeinate -dimsu bash -c '
   if [ -f hpa.ready ]; then
     account=$(aws sts get-caller-identity --query Account --output text)
     reg="$account.dkr.ecr.ap-southeast-2.amazonaws.com"
-    for i in 1 2 3 4 5; do eksctl create nodegroup -f eks-hpa.yaml && break; sleep 60; done
+    # This account may not create CloudFormation stacks (organisation policy), so the extra capacity comes
+    # from scaling the 8-core node group to three nodes: 3 x c7g.2xlarge + 1 x c7g.xlarge for the SUT.
+    aws eks update-nodegroup-config --region ap-southeast-2 --cluster-name crossover --nodegroup-name sut-8 \
+      --scaling-config minSize=1,maxSize=3,desiredSize=3
+    for i in $(seq 90); do [ "$(kubectl get nodes -l crossover/role=sut --no-headers | grep -c " Ready")" -ge 4 ] && break; sleep 20; done
+    kubectl get nodes -l crossover/role=sut --no-headers
     python3 campaign.py --env eks-hpa --ramp --hpa 24 --configs A,B,C --reps 3 --alloc alloc-prop.json \
       --image "$reg/crossover:1.0" --loadgen-image "$reg/crossover-loadgen:1.0"
     echo "$(date +%H:%M:%S) autoscaling campaign exited with $?"

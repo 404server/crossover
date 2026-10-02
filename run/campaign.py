@@ -27,7 +27,13 @@ import time
 import gen
 
 os.environ.setdefault("KUBECTL_REMOTE_COMMAND_WEBSOCKETS", "false")  # SPDY exec streams; see push()
-LG =["kubectl", "exec", "-i", "-n", gen.LOAD_NS, "deploy/loadgen", "--", "sh", "-c"]
+
+
+def lg(script):
+    """kubectl exec into the load generator. Over a long round trip the exec stream can close before the
+    last output arrives when the remote command exits at once (measured on EKS: 1 of 8 transfers complete),
+    so the command waits 2 s before exiting and keeps its exit status."""
+    return ["kubectl", "exec", "-i", "-n", gen.LOAD_NS, "deploy/loadgen", "--", "sh", "-c", f"({script}); rc=$?; sleep 2; exit $rc"]
 
 
 def sh(cmd, stdin=None, check=True):
@@ -67,7 +73,7 @@ def attack(tfile, duration, out=None, rate=None, workers=None, bodies=False):
     script = f"vegeta attack {flags} > /work/r.bin && vegeta report -type=json < /work/r.bin >&2"
     if out:
         script += " && vegeta encode --to json < /work/r.bin | gzip -9 > /work/r.gz && wc -c < /work/r.gz >&2"
-    r = subprocess.run(LG + [script], capture_output=True)
+    r = subprocess.run(lg(script), capture_output=True)
     err = r.stderr.decode().splitlines()
     report = next((l for l in reversed(err) if l.startswith("{")), None)
     if r.returncode != 0 or report is None:
@@ -83,7 +89,7 @@ def fetch(path, size, out):
     the size matches, and the gzip stream is checked before the file is kept."""
     data = b""
     for _ in range(30):
-        data += sh(LG + [f"tail -c +{len(data) + 1} {path}"])
+        data += sh(lg(f"tail -c +{len(data) + 1} {path}"))
         if len(data) >= size:
             break
     if len(data) != size:
@@ -97,7 +103,7 @@ def push(data, path):
     """Copies a file into the load generator. kubectl exec has lost the tail of stdin in
     practice (a 200 KB target file arrived as 16 KB), so the size is verified."""
     for _ in range(5):
-        if sh(LG + [f"cat > {path}; wc -c < {path}"], data).strip() == str(len(data)).encode():
+        if sh(lg(f"cat > {path}; wc -c < {path}"), data).strip() == str(len(data)).encode():
             return
     raise RuntimeError(f"could not copy {path} into the load generator intact")
 
@@ -135,6 +141,10 @@ def cgroup_cpu(pods=None):
     out = {}
     for (pod, c), pr in procs.items():
         text = pr.communicate()[0].decode()
+        for _ in range(3):
+            if "usage_usec" in text:
+                break
+            text = sh(["kubectl", "exec", "-n", gen.NS, pod, "-c", c, "--", "cat", "/sys/fs/cgroup/cpu.stat"], check=False).decode()
         out[f"{pod}/{c}"] = {k: int(v) for k, v in (l.split() for l in text.splitlines() if l.strip())}
     return out
 
@@ -282,7 +292,7 @@ def cell(rep, cfg, a, out):
         meta["pods_wl"][wl] = json.loads(kube("get", "pods", "-n", gen.NS, "-o", "json"))
         tfile = f"/work/{wl}.txt"
         push(targets(cfg, wl).encode(), tfile)
-        sh(LG + [f"head -n 300 {tfile} > /work/eq-{wl}.txt"])
+        sh(lg(f"head -n 300 {tfile} > /work/eq-{wl}.txt"))
         attack(f"/work/eq-{wl}.txt", 5, d / "equiv" / f"{wl}.json.gz", rate=20, bodies=True)
         # Closed-loop warm-up: runs at each configuration's own capacity, so every JVM sees tens of
         # thousands of requests (JIT, pools, caches) without the overload an open-loop warm-up risks.
@@ -374,7 +384,7 @@ if __name__ == "__main__":
                 except Exception as e:  # e.g. the laptop lost its network mid-step; the cell restarts clean
                     log(f"  !! rep{rep}/{cfg} failed ({type(e).__name__}: {str(e)[-300:]}); retrying once the API is back")
                     wait_api()
-                    sh(LG + ["pkill vegeta; true"], check=False)  # an orphaned attack must not overlap the retry
+                    sh(lg("pkill vegeta; true"), check=False)  # an orphaned attack must not overlap the retry
             else:
                 sys.exit(f"rep{rep}/{cfg} failed three times")
     kube("delete", "ns", gen.NS, "--ignore-not-found", "--wait=false")
