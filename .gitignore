@@ -18,3 +18,7 @@ paper/*.out
 # internal working notes (citation audit, venue research, cover-letter drafts)
 notes/*
 !notes/control-lowload.md
+# Zenodo upload staging (run/archive.sh)
+zenodo/
+run/hpa.ready
+*/kind-hpa-smoke/
