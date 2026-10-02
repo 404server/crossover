@@ -13,12 +13,16 @@ exec caffeinate -dimsu bash -c '
   if [ -f hpa.ready ]; then
     account=$(aws sts get-caller-identity --query Account --output text)
     reg="$account.dkr.ecr.ap-southeast-2.amazonaws.com"
-    eksctl create nodegroup -f eks-hpa.yaml
+    for i in 1 2 3 4 5; do eksctl create nodegroup -f eks-hpa.yaml && break; sleep 60; done
     python3 campaign.py --env eks-hpa --ramp --hpa 24 --configs A,B,C --reps 3 --alloc alloc-prop.json \
       --image "$reg/crossover:1.0" --loadgen-image "$reg/crossover-loadgen:1.0"
     echo "$(date +%H:%M:%S) autoscaling campaign exited with $?"
   else
     echo "$(date +%H:%M:%S) run/hpa.ready missing: skipping the autoscaling treatment"
   fi
-  eksctl delete cluster -f eks.yaml --wait
-  echo "$(date +%H:%M:%S) cluster deleted"' "$1"
+  # retried until AWS confirms the cluster is gone: a delete during a network outage fails quietly
+  until aws eks describe-cluster --name crossover --region ap-southeast-2 2>&1 | grep -q ResourceNotFoundException; do
+    eksctl delete cluster -f eks.yaml --wait
+    sleep 60
+  done
+  echo "$(date +%H:%M:%S) cluster deleted (confirmed by AWS)"' "$1"

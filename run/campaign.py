@@ -161,6 +161,14 @@ def recover(tfile, tries=30):
     raise RuntimeError("system under test did not recover from overload")
 
 
+def wait_api(limit=6 * 3600):
+    t0 = time.time()
+    while sh(["kubectl", "get", "--raw", "/readyz"], check=False).strip() != b"ok":
+        if time.time() - t0 > limit:
+            sys.exit("cluster API unreachable for too long")
+        time.sleep(30)
+
+
 def manifests(cfg, a, shares=None, hpa=0):
     return gen.manifests(cfg, a.image, a.app_cpu, a.app_mem, a.db_cpu, a.db_mem, hpa, a.mem_floor, shares, cpu_cap=a.cpu_cap)
 
@@ -342,6 +350,15 @@ if __name__ == "__main__":
         for cfg in order:
             if (out / f"rep{rep}" / cfg / "done").exists():
                 continue
-            cell(rep, cfg, a, out)
+            for attempt in range(3):
+                try:
+                    cell(rep, cfg, a, out)
+                    break
+                except Exception as e:  # e.g. the laptop lost its network mid-step; the cell restarts clean
+                    log(f"  !! rep{rep}/{cfg} failed ({type(e).__name__}: {str(e)[-300:]}); retrying once the API is back")
+                    wait_api()
+                    sh(LG + ["pkill vegeta; true"], check=False)  # an orphaned attack must not overlap the retry
+            else:
+                sys.exit(f"rep{rep}/{cfg} failed three times")
     kube("delete", "ns", gen.NS, "--ignore-not-found", "--wait=false")
     log("campaign complete")
