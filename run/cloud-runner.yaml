@@ -1,0 +1,63 @@
+# In-cluster controller for the cloud programme (see cloud-run.sh). ${REG} is the ECR registry; apply with
+#   sed "s|\${REG}|$reg|g" run/cloud-runner.yaml | kubectl apply -f -
+apiVersion: v1
+kind: Namespace
+metadata: {name: runner}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata: {name: runner, namespace: runner}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata: {name: crossover-runner}
+roleRef: {apiGroup: rbac.authorization.k8s.io, kind: ClusterRole, name: cluster-admin}
+subjects: [{kind: ServiceAccount, name: runner, namespace: runner}]
+---
+apiVersion: batch/v1
+kind: Job
+metadata: {name: programme, namespace: runner}
+spec:
+  backoffLimit: 20                  # a crashed controller restarts and the campaigns resume
+  template:
+    spec:
+      serviceAccountName: runner
+      restartPolicy: OnFailure
+      nodeSelector: {crossover/role: loadgen}
+      containers:
+        - name: controller
+          image: ${REG}/crossover-runner:1.0
+          imagePullPolicy: Always
+          env:
+            - {name: REG, value: "${REG}"}
+            - {name: CLUSTER, value: crossover}
+            - {name: REGION, value: ap-southeast-2}
+            - {name: AWS_REGION, value: ap-southeast-2}
+            - {name: AWS_DEFAULT_REGION, value: ap-southeast-2}
+            - {name: PYTHONUNBUFFERED, value: "1"}
+          resources: {requests: {cpu: 250m, memory: 512Mi}}
+          volumeMounts: [{name: results, mountPath: /app/results}]
+      volumes:
+        - {name: results, hostPath: {path: /var/lib/crossover, type: DirectoryOrCreate}}
+---
+# Backstop if the controller hangs: scale the system-under-test nodes to zero on Monday 08:00 Almaty time.
+# The load generator's node, which holds the results, is kept.
+apiVersion: batch/v1
+kind: CronJob
+metadata: {name: crossover-deadline, namespace: kube-system}
+spec:
+  schedule: "0 3 5 10 *"
+  timeZone: Etc/UTC
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      backoffLimit: 6
+      template:
+        spec:
+          restartPolicy: OnFailure
+          nodeSelector: {crossover/role: loadgen}
+          containers:
+            - name: scale-to-zero
+              image: ${REG}/crossover-runner:1.0
+              command: ["sh", "-c", "for ng in sut-8 sut-4; do aws eks update-nodegroup-config --region ap-southeast-2 --cluster-name crossover --nodegroup-name $ng --scaling-config minSize=0,maxSize=3,desiredSize=0 || true; done"]
+              env: [{name: AWS_DEFAULT_REGION, value: ap-southeast-2}]

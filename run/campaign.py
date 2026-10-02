@@ -27,6 +27,8 @@ import time
 import gen
 
 os.environ.setdefault("KUBECTL_REMOTE_COMMAND_WEBSOCKETS", "false")  # SPDY exec streams; see push()
+# a clock that stops while the host sleeps (macOS); CLOCK_MONOTONIC behaves so on Linux
+UPTIME = getattr(time, "CLOCK_UPTIME_RAW", time.CLOCK_MONOTONIC)
 
 
 def lg(script):
@@ -194,9 +196,9 @@ def guarded(d, step, run):
     analysis drops the step, and waits for the deployment to recover before continuing."""
     p0 = sut_pods()
     before, cg0 = restarts(p0), cgroup_cpu(p0)
-    wall0, up0 = time.time(), time.clock_gettime(time.CLOCK_UPTIME_RAW)  # uptime stops while the host sleeps
+    wall0, up0 = time.time(), time.clock_gettime(UPTIME)  # uptime stops while the host sleeps
     result = run()
-    slept = (time.time() - wall0) - (time.clock_gettime(time.CLOCK_UPTIME_RAW) - up0)
+    slept = (time.time() - wall0) - (time.clock_gettime(UPTIME) - up0)
     p1 = sut_pods()
     after, cg1 = restarts(p1), cgroup_cpu(p1)
     if slept > 5:
@@ -298,9 +300,9 @@ def ramp(d, cfg, wl, tfile, a, shares):
 
         th = threading.Thread(target=sample, daemon=True)
         th.start()
-        wall0, up0 = time.time(), time.clock_gettime(time.CLOCK_UPTIME_RAW)
+        wall0, up0 = time.time(), time.clock_gettime(UPTIME)
         rep_ = attack(tfile, a.ramp_window, d / wl / "ramp" / f"{r}.json.gz", rate=r, settle=a.ramp_step - a.ramp_window)
-        slept = (time.time() - wall0) - (time.clock_gettime(time.CLOCK_UPTIME_RAW) - up0)
+        slept = (time.time() - wall0) - (time.clock_gettime(UPTIME) - up0)
         stop.set()
         th.join()
         pods = sut_pods()

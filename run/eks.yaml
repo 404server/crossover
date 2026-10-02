@@ -17,6 +17,7 @@ managedNodeGroups:
   - name: sut-8
     instanceType: c7g.2xlarge
     desiredCapacity: 1
+    maxSize: 3                # the autoscaling treatment scales this group to three nodes
     availabilityZones: [ap-southeast-2a]
     labels: {crossover/role: sut}
     volumeSize: 30
