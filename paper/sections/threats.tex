@@ -19,9 +19,12 @@ application pod, a cap of 1{,}000 connections per Tomcat process, and server-sid
 limit); each is applied to all configurations and is documented with its reason in
 Section~\ref{sec:budget}. The equal CPU split is a deliberate choice, not the only defensible one: an operator
 who sizes each service to its demand would give the edge service of~C more than half a core. The results on
-fragmentation (Section~\ref{sec:results}) are therefore results about equal static allocation, and the
-autoscaling experiments of the protocol, which the runner supports but this campaign did not use, are the
-test of demand-driven allocation.
+fragmentation (Section~\ref{sec:results}) are therefore results about equal static allocation. The two further
+treatments of Section~\ref{sec:treatments} test the alternatives. Each has its own bias. The proportional shares are
+fitted to the very workloads they are evaluated on, which favours the decomposed configurations. The autoscaling
+results depend on the controller's settings and on the step length. With 180\,s levels, a new replica's JVM
+warm-up falls inside the measurement, which is part of what elasticity costs. A longer level, a lower utilisation
+target or warmed replicas would shift the sustained rates.
 
 \paragraph{The measurement environment.} All nodes of the kind cluster, including the load generator's, share
 one host's CPUs. The load generator was not CPU-limited, and the system under test could not take more than its
@@ -36,15 +39,22 @@ It affects every configuration, but configurations with more hops wake more thre
 slightly inflate their low-load ratios in Table~\ref{tab:h1}. On bare metal it can be controlled by pinning the
 CPU frequency governor and limiting idle states, which is part of the protocol for the remaining environments.
 
+The cloud environment removes the shared host but adds variation the local one does not have. The instances are
+on shared tenancy, so other customers' workloads can affect caches and the network. The VPC network's latency
+varies over time. Instances of one type can also differ slightly in performance. Every node sat in one
+availability zone of one region, so the results do not include cross-zone traffic. The default scheduler's
+placement also decides which calls cross nodes. It is recorded per cell but not varied, so placement is part of
+each configuration in this environment rather than a controlled factor.
+
 \paragraph{External validity.} The application is small and synthetic, written in one language and one
 framework. Its per-request business logic is cheap, so the fixed costs of distribution (serialisation, HTTP,
 network) weigh more than they would in a service that spends tens of milliseconds computing. Communication is
 JSON over HTTP/1.1; binary protocols such as gRPC over HTTP/2 reduce serialisation and connection costs and
 could change the magnitudes, although not the direction, of the per-hop results. All databases are PostgreSQL
 instances co-located in the same cluster. The mesh is Istio~1.31 with sidecars; sidecar-less data planes such as
-Istio Ambient are reported to cost far less~\cite{BremlerBarr2025} and were not measured. The single-host
-environment says nothing about cloud-network effects; the bare-metal and GKE environments of the protocol,
-which the same scripts target, address this.
+Istio Ambient are reported to cost far less~\cite{BremlerBarr2025} and were not measured. Both environments use
+arm64 processors, one instance family and one cloud provider. x86 servers, bare metal and other providers,
+which the same scripts also target, remain untested.
 
 \paragraph{Conclusion validity.} With \xo{reps} repetitions per configuration, intervals are wide for effects
 that are small relative to the variation between deployments. We report intervals rather than binary

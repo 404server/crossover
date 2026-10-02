@@ -153,8 +153,8 @@ Bj{\o}rndal et al.$^{\dagger}$ \cite{Bjorndal2021} & Monolith vs.\ microservices
 Zhao et al.$^{\dagger}$ \cite{Zhao2025} & Fine vs.\ coarse microservices (Train Ticket) & ? & ? &
   Response time (?) & n/r & Five request rates \\
 \midrule
-This study & Monolith; coarse (4 services); fine (8); fine + Istio & Kubernetes: kind on one host
-  (bare-metal and GKE planned, same scripts) & Vegeta constant rate (open) for latency;
+This study & Monolith; coarse (4 services); fine (8); fine + Istio & Kubernetes: kind on one host;
+  Amazon EKS (Graviton); static and autoscaled CPU & Vegeta constant rate (open) for latency;
   $N$-worker sweeps (closed) for capacity & p50, p95, p99, p99.9 & Yes: app, db, ser, net,
   framework, edge & 12 rate levels, 9 concurrency levels \\
 \bottomrule

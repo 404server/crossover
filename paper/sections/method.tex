@@ -158,14 +158,31 @@ are deterministic (user, item count, total, status), so both operations can be c
 \section{Experimental method}
 \label{sec:method}
 
-\subsection{Environment}
+\subsection{Environments}
+\label{sec:env}
 
-The campaign reported here ran on a kind~0.31 Kubernetes~\xo{k8s} cluster on one Apple-silicon workstation
-(12 cores, 24\,GiB; Docker Desktop VM with 12 vCPUs and 11.7\,GiB): one control-plane node, one node reserved
-for the load generator and two nodes for the system under test, selected with node labels. All nodes share
-the host's CPUs, so this environment isolates the software stack (Kubernetes networking, CFS quotas,
-sidecars) but not hardware. The same manifests and scripts run unchanged on a bare-metal cluster and on
-GKE, the two further environments of the protocol; Section~\ref{sec:threats} discusses what the single-host
+The experiments ran in two environments with the same manifests, scripts and container images. Both are arm64,
+so even the images are identical. In each, one node is reserved for the load generator and the system under test
+runs on two further nodes, selected with node labels.
+
+\paragraph{Local.} A kind~0.31 cluster running Kubernetes~\xo{k8s} on one Apple-silicon workstation with
+12 cores and 24\,GiB, inside a Docker Desktop VM with 12 vCPUs and 11.7\,GiB. It has one control-plane node, one
+load-generator node and two nodes for the system under test. All nodes share the host's CPUs, so this environment isolates the software stack
+(Kubernetes networking, CFS quotas, sidecars), not the hardware.
+
+\paragraph{Cloud.} An Amazon EKS cluster running Kubernetes~1.35 in region ap-southeast-2, with every node in
+one availability zone. The system under test runs on a c7g.2xlarge (8 vCPUs, 16\,GiB) and a c7g.xlarge
+(4 vCPUs, 8\,GiB) on-demand instance, and the load generator on a further c7g.xlarge. These instances use AWS
+Graviton3 processors, on which every vCPU is a physical core. The nodes run Amazon Linux~2023 (kernel~6.12) and
+containerd~2.2. Networking uses the Amazon VPC CNI, so pods have VPC addresses and traffic between nodes crosses
+the VPC network, and kube-proxy runs in iptables mode. The two nodes have twice the CPU of the budget, which
+leaves room for sidecars and system daemons. The default scheduler placed the pods, constrained only by the
+node labels, and every cell records the resulting placement.
+% TODO(verify after the EKS campaign): placement pattern below, checked on 12 of 20 cells so far.
+In Configs~A and~B it placed every application pod on the larger node and every database on the smaller one in
+every repetition, so all database calls crossed the network. In C and~D some calls stayed within a node.
+
+Both environments run the same rate and concurrency grids. Section~\ref{sec:threats} discusses what each
 environment can and cannot show.
 
 \subsection{Workloads and load generation}
@@ -204,7 +221,52 @@ the pods' restart counts. A step during which any pod restarted, or during which
 comparing wall-clock time with an uptime clock that stops during sleep), is recorded as an incident and excluded from
 the analysis. After a saturated step, and before each closed-loop sweep, the runner waits until a 3\,s probe at 20
 requests per second completes without errors and with a p99 below 500\,ms, so that the backlog of an overloaded step
-cannot leak into the next measurement; \xo{cells} cells ran \xo{reps} repetitions in \xo{hours}\,h.
+cannot leak into the next measurement. The local campaign ran \xo{cells} cells (\xo{reps} repetitions) in
+\xo{hours}\,h and the cloud campaign \xo{eks/cells} cells in \xo{eks/hours}\,h. The cloud runner also survives a
+loss of its connection to the cluster: it then discards the unfinished cell and repeats it once the API server is
+reachable again.
+
+\subsection{Resource treatments}
+\label{sec:treatments}
+
+The equal static split of Section~\ref{sec:budget} is the main treatment, and every result is reported for it
+unless stated otherwise. Two further treatments relax it. Each changes only how a fixed amount of CPU is
+distributed, and each gives every configuration the same total.
+
+\paragraph{Demand-proportional allocation.} Each pod of a decomposed configuration receives a floor (0.15
+cores for application pods, 0.1 for database pods) plus a share of the rest of its tier's budget. That share
+equals the pod's share of its tier's measured CPU use in the equal-budget campaign. The shares are medians across
+repetitions, taken at the highest offered rate that every configuration sustained there (600 requests per second
+for browse, 400 for checkout). They are computed per workload, and each workload runs on its own deployment with
+its own allocation. This is the best static allocation for a known workload, so it bounds from above what
+right-sizing can do for a decomposed deployment. It moves most of the budget to the edge. Under browse, the
+\texttt{catalog} service of~B gets 2.40 cores instead of 1.0 and the \texttt{search} service of~C gets 1.88
+instead of 0.5. Under checkout, \texttt{order} in~B gets 2.14 cores and \texttt{orders} in~C gets 1.44. The
+monolith has one pod per tier, so its allocation cannot change. It is nevertheless re-measured in the same
+campaign, so that every comparison is with a monolith measured alongside it. This treatment ran in the local
+environment with \xo{prop/reps} repetitions of all four configurations.
+
+\paragraph{Autoscaling under a shared ceiling.} The scalability argument for microservices is usually made for
+elastic capacity, so the third treatment adds it. Every application deployment gets a Horizontal Pod Autoscaler
+(\texttt{autoscaling/v2}). It targets 70\% average CPU utilisation of the pods' requests, allows one to 24
+replicas and uses the default scaling behaviour, and each run starts from the demand-proportional allocation. A
+namespace \texttt{ResourceQuota} caps the CPU requested by all pods of a configuration at 14 cores, three times
+the application budget plus the database budget. The autoscaler can therefore add replicas until a
+configuration's pods together hit the same ceiling: the monolith up to three replicas, the browse edge service
+of~C up to four more. Database pods are not scaled, so the database tier keeps its 2-core budget in every configuration.
+The monolith keeps its single shared database, as it would in practice.
+
+Load is open loop and rises in levels held for 180\,s each without pause or reset: browse from 500 to 8{,}000
+requests per second in nine levels, checkout from 200 to 2{,}400 in eight. Replicas added at one level carry over
+to the next. Latency and throughput come from the last 60\,s of each level, after the autoscaler has had time to
+react, and the saturation rule of Section~\ref{sec:method} is applied to that window. Replica counts, the
+autoscalers' view and quota use are sampled every 10\,s. The autoscalers are created only after the warm-up and
+are given 30\,s with the system idle, so every ramp starts from one replica per service and new replicas join
+cold. A ramp stops after two consecutive levels with more than 5\% errors or a p99 above 2\,s. Configurations A, B
+and~C take part. D is left out because its sidecars' CPU requests would count against the quota and its
+difference from~C, the mesh, is what H3 measures. The treatment ran in the cloud environment with two more
+c7g.2xlarge nodes for the system under test. With them the nodes offer 28 vCPUs, so the quota, not the nodes,
+limits scaling. Each configuration ran \xo{hpa/reps} repetitions.
 
 \subsection{Statistical analysis}
 \label{sec:stats}
@@ -245,7 +307,11 @@ $\mathrm{p99}_X/\mathrm{p99}_A$ lies entirely below one; it is supported if all 
 \textbf{H2 (scaling crossover).} Under the equal budget, some microservice configuration overtakes the
 monolith's throughput within the tested concurrency range, and its coherency coefficient is lower. H2 is
 falsified if the monolith's throughput matches or exceeds every microservice configuration at every measured
-concurrency level, or if no microservice configuration has $\beta < \beta_A$.
+concurrency level, or if no microservice configuration has $\beta < \beta_A$. The same condition is tested
+separately under demand-proportional allocation. Under autoscaling the measurements are open-loop ramps, so the
+condition is stated on the \emph{sustained rate}: the highest offered rate at which no repetition saturated, at
+that level or any lower one. There, H2 is falsified if no decomposed configuration sustains a higher rate than the
+monolith under the same ceiling.
 
 \textbf{H3 (mesh compounding).} Istio's overhead grows with call-graph depth and exceeds a quarter of end-to-end
 latency on the six-hop path. With C and D differing only in the mesh, the overhead at a given offered rate is

@@ -34,7 +34,8 @@ The study answers four research questions:
 \item[RQ1] How much tail latency does decomposition add at low load, when every configuration has spare
 capacity?
 \item[RQ2] Under an equal resource budget, does any decomposed configuration reach a higher throughput than the
-monolith, and where do their capacity curves cross?
+monolith, and where do their capacity curves cross? Does the answer change when the budget is allocated in
+proportion to demand, or when an autoscaler can add replicas up to a shared ceiling?
 \item[RQ3] In which layers does the additional latency of decomposition arise, and what limits each
 configuration's capacity?
 \item[RQ4] How much does a sidecar service mesh add, and does its cost grow with the depth of the call graph?
@@ -51,8 +52,9 @@ and are checked for identical responses on every deployment;
 \item a per-layer latency accounting based on \texttt{Server-Timing} that assigns every millisecond of end-to-end
 latency to one layer and needs no clock synchronisation, together with cgroup-level CPU and throttling data that
 explain the capacity limits;
-\item measurements from a campaign of \xo{cells} fresh deployments, analysed with the repetition as the unit of
-replication, that test H1--H3 and locate (or rule out) the crossover under an equal budget;
+\item measurements from \xo{cells} fresh deployments on a local cluster and \xo{eks/cells} on Amazon EKS,
+analysed with the repetition as the unit of replication. They test H1--H3 and locate (or rule out) the crossover
+under an equal budget, under demand-proportional allocation and under autoscaling;
 \item the testbed, campaign runner, raw data, analysis pipeline and an interactive dashboard, from which every
 number in this article is generated.
 \end{enumerate}

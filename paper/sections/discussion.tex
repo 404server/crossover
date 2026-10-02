@@ -60,13 +60,12 @@ These are reported because others building such testbeds will meet them.
 
 \subsection{Future work}
 
-The same campaign runner targets a bare-metal cluster and GKE; running it there separates the effects of the
-single-host environment from those of the architectures and quantifies the cloud network's share of the
-\emph{net} layer. Two treatments follow directly from the results: a demand-proportional CPU allocation, and the
-Horizontal Pod Autoscaler with a cluster-wide cap, the setting in which a crossover is most plausible. Further
-variants are gRPC instead of JSON over HTTP/1.1, a sidecar-less mesh, and a modular monolith as a fifth
-configuration.
+The campaign runner also targets bare-metal clusters. Runs on x86 bare metal would separate virtualisation and
+cloud-network effects from those of the architectures. The autoscaling treatment can be extended with warmed
+replicas, other utilisation targets and a database tier that scales as well. Further variants are gRPC instead
+of JSON over HTTP/1.1, a sidecar-less mesh, and a modular monolith as a fifth configuration.
 
+% TODO(results): extend the conclusion with the cloud, proportional-allocation and autoscaling results.
 \section{Conclusion}
 \label{sec:conclusion}
 
