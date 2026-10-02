@@ -4,7 +4,7 @@
     .venv/bin/python analysis/compare_env.py --a kind --b eks
 
 Writes paper/generated/tab-env.tex (table body): per workload and configuration, the p99 at the lowest
-offered rate and its ratio to the monolith (H1), the USL peak throughput and its ratio to the monolith (H2),
+offered rate and its ratio to the monolith (H1), the measured peak throughput and its ratio to the monolith (H2),
 and the inter-service transit per hop, for both environments. Both summaries must exist (analysis/analyze.py).
 """
 import argparse
@@ -21,7 +21,7 @@ def cols(s, cfg, wl):
     low = (s["open"].get(cfg, {}).get(wl) or [{}])[0]
     p99 = (low.get("p99") or {}).get("med")
     h1 = next((t for t in s["hypotheses"]["H1"]["tests"] if t["workload"] == wl and t["config"] == cfg), None)
-    xmax, xmax_a = (s["usl"].get(c, {}).get(wl, {}).get("xmax") for c in (cfg, "A"))
+    xmax, xmax_a = ((s.get("peak", {}).get(c, {}).get(wl) or {}).get("est") for c in (cfg, "A"))  # measured peaks
     hop = s.get("perhop", {}).get(wl, {}).get(cfg, {}).get("net")
     return [fmt(p99), "--" if cfg == "A" else fmt(h1["est"]) if h1 else "n/a", fmt(xmax),
             "--" if cfg == "A" else fmt(xmax / xmax_a) if xmax and xmax_a else "n/a", "--" if cfg == "A" else fmt(hop)]

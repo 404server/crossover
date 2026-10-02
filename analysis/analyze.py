@@ -10,8 +10,10 @@ Writes  results/<env>/summary.json          everything, machine-readable
         web/data.js                          all environments' summaries for the dashboard
 
 Statistics follow two rules. The unit of replication is the repetition (a fresh deployment),
-never the individual request, because requests within a run are autocorrelated. Tail-latency
-ratios use a two-level (repetition, then request) bootstrap in the spirit of Kalibera & Jones.
+never the individual request, because requests within a run are autocorrelated. Spreads across
+repetitions are reported as ranges. Tail-latency ratios use a two-level bootstrap in the spirit of
+Kalibera & Jones: repetitions (paired by repetition index), then moving blocks of consecutive
+requests within each, so serial dependence inside a run is kept.
 """
 import argparse
 import base64
@@ -33,18 +35,21 @@ WORKLOADS = ["browse", "checkout"]
 LAYERS = ["app", "db", "ser", "net", "oth"]          # server-reported; edge = e2e - tot
 ST = re.compile(r"(\w+);dur=(-?[\d.]+)")
 ERR_MAX = 0.05                                        # a step with more errors is saturated
+SLO_MS = 100                                          # nor is an open-loop step whose p99 exceeds this sustained
+B_H1 = 10_000                                         # bootstrap replicates for the H1 intervals
 PCTS = [50, 90, 95, 99, 99.9]
 
 
 # ------------------------------------------------------------------ loading
 
 def load_step(path, bodies=False):
-    lat, code, ts, lay, calls, body = [], [], [], [], [], {}
+    lat, code, ts, lay, calls, seq, body = [], [], [], [], [], [], {}
     with gzip.open(path, "rt") as f:
         for line in f:
             r = json.loads(line)
             lat.append(r["latency"])
             code.append(r["code"])
+            seq.append(r["seq"])
             ts.append(r["timestamp"].rstrip("Z"))
             h = (r.get("headers") or {}).get("Server-Timing")
             d = dict(ST.findall(h[0])) if h else {}
@@ -54,7 +59,7 @@ def load_step(path, bodies=False):
                 body[r["seq"]] = hashlib.sha256(base64.b64decode(r["body"] or "")).hexdigest() if r["code"] == 200 else None
     t = np.array(ts, dtype="datetime64[ns]").astype(np.int64) / 1e9
     s = {"lat": np.array(lat, float) / 1e6, "ok": np.array(code) == 200, "t": t,
-         "lay": np.array(lay, float).reshape(-1, len(LAYERS) + 1), "calls": np.array(calls)}
+         "lay": np.array(lay, float).reshape(-1, len(LAYERS) + 1), "calls": np.array(calls), "seq": np.array(seq)}
     if bodies:
         s["body"] = body
     return s
@@ -70,13 +75,25 @@ def summarize(s, rate=None):
     lay["edge"] = float(np.nanmean(s["lat"][ok] - L[:, -1])) if len(L) else math.nan
     good_calls = s["calls"][ok & (s["calls"] >= 0)]
     err = 1 - ok.mean()
+    p99 = float(np.percentile(s["lat"], 99))
+    tail = ok & (s["lat"] >= p99)  # the slowest 1%: what the p99 is made of
+    T = s["lay"][tail]
+    tail_lay = {k: float(np.nanmean(T[:, i])) if len(T) else math.nan for i, k in enumerate(LAYERS)}
+    tail_lay["edge"] = float(np.nanmean(s["lat"][tail] - T[:, -1])) if len(T) else math.nan
+    lag = None
+    if rate:  # Vegeta stamps a request when it is sent; its lag behind the constant-rate schedule
+        first = s["t"][s["seq"].argmin()]
+        lag = (s["t"] - (first + (s["seq"] - s["seq"].min()) / rate)) * 1e3
     return {"n": n, "thr": thr, "err": err, "span": span,
+            "tail_layers": tail_lay,
+            "lag_p50": float(np.percentile(lag, 50)) if lag is not None else None,
+            "lag_p99": float(np.percentile(lag, 99)) if lag is not None else None,
             "send": (n - 1) / max(s["t"].max() - t0, 1e-9),
             "mean": float(s["lat"].mean()),
             **{f"p{p:g}": float(np.percentile(s["lat"], p)) for p in PCTS},
             "layers": lay,
             "calls": int(np.bincount(good_calls).argmax()) if len(good_calls) else None,
-            "saturated": bool(err > ERR_MAX or (rate is not None and thr < 0.9 * rate))}
+            "saturated": bool(err > ERR_MAX or (rate is not None and (thr < 0.9 * rate or p99 > SLO_MS)))}
 
 
 def service(key):
@@ -166,36 +183,73 @@ def load_env(raw):
 # ------------------------------------------------------------------ statistics
 
 def agg(vals):
-    """Median across repetitions with its spread: bootstrap 95% CI when n >= 5, else the range."""
+    """Median across repetitions and the range (min, max). With five or fewer repetitions a bootstrap
+    interval of the median is the range anyway, so the range is what is reported."""
     v = np.array([x for x in vals if x is not None and not math.isnan(x)], float)
     if len(v) == 0:
         return None
-    med = float(np.median(v))
-    if len(v) >= 5:
-        b = np.median(RNG.choice(v, (2000, len(v))), axis=1)
-        lo, hi, kind = np.percentile(b, 2.5), np.percentile(b, 97.5), "ci95"
-    else:
-        lo, hi, kind = v.min(), v.max(), "range"
-    return {"med": med, "lo": float(lo), "hi": float(hi), "n": len(v), "kind": kind}
+    return {"med": float(np.median(v)), "lo": float(v.min()), "hi": float(v.max()), "n": len(v), "kind": "range"}
 
 
-def pooled_pct(reps, q, B, level, cap=5000):
-    """Two-level bootstrap of a pooled percentile: resample repetitions, then requests."""
-    reps = [r if len(r) <= cap else RNG.choice(r, cap, replace=False) for r in reps]
-    est = float(np.percentile(np.concatenate(reps), q))
-    boots = np.empty(B)
+def blocks(r, L):
+    """Moving-block resample of one run's requests (in file order, i.e. completion order)."""
+    n = len(r)
+    L = max(1, min(int(L), n // 20))  # at least 20 blocks
+    if L == 1:
+        return r[RNG.integers(n, size=n)]
+    starts = RNG.integers(0, n - L + 1, size=-(-n // L))
+    return r[(starts[:, None] + np.arange(L)).ravel()[:n]]
+
+
+def window(r, cap):
+    if not cap or len(r) <= cap:
+        return r
+    s0 = RNG.integers(0, len(r) - cap + 1)
+    return r[s0:s0 + cap]
+
+
+def ratio_ci(x_reps, a_reps, q=99, B=1000, alpha=0.05, block=1, cap=None):
+    """Bootstrap interval of pooled-percentile(X) / pooled-percentile(A). x_reps, a_reps: {rep: latencies}.
+    Repetitions are resampled with replacement, paired by repetition index when both sides have the same
+    repetitions (each repetition block ran its configurations close together in time); within each, requests
+    are resampled in moving blocks of `block` consecutive requests. cap: each repetition contributes a
+    contiguous window of at most cap requests (used for the descriptive ratios at high rates)."""
+    keys_x, keys_a = sorted(x_reps), sorted(a_reps)
+    xr = [window(x_reps[k], cap) for k in keys_x]
+    ar = [window(a_reps[k], cap) for k in keys_a]
+    est = float(np.percentile(np.concatenate(xr), q) / np.percentile(np.concatenate(ar), q))
+    paired = keys_x == keys_a
+    r = np.empty(B)
     for b in range(B):
-        pick = RNG.integers(len(reps), size=len(reps))
-        boots[b] = np.percentile(np.concatenate([RNG.choice(reps[i], len(reps[i])) for i in pick]), q)
-    return est, boots
+        px = RNG.integers(len(xr), size=len(xr))
+        pa = px if paired else RNG.integers(len(ar), size=len(ar))
+        r[b] = (np.percentile(np.concatenate([blocks(xr[i], block) for i in px]), q)
+                / np.percentile(np.concatenate([blocks(ar[i], block) for i in pa]), q))
+    return {"est": est, "lo": float(np.percentile(r, 100 * alpha / 2)), "hi": float(np.percentile(r, 100 * (1 - alpha / 2))),
+            "level": 1 - alpha, "reps": [len(xr), len(ar)], "paired": paired, "B": B, "block": block}
 
 
-def ratio_ci(x_reps, a_reps, q=99, B=400, alpha=0.05):
-    ex, bx = pooled_pct(x_reps, q, B, alpha)
-    ea, ba = pooled_pct(a_reps, q, B, alpha)
-    r = bx / ba
-    return {"est": ex / ea, "lo": float(np.percentile(r, 100 * alpha / 2)), "hi": float(np.percentile(r, 100 * (1 - alpha / 2))),
-            "level": 1 - alpha, "reps": [len(x_reps), len(a_reps)]}
+def peak_ci(curves, B=10_000):
+    """Measured capacity: the highest median throughput over the concurrency levels every repetition ran,
+    with a percentile interval from resampling whole repetitions."""
+    ns = sorted(set.intersection(*[set(c) for c in curves]))
+    M = np.array([[c[n] for n in ns] for c in curves], float)
+    med = np.median(M, axis=0)
+    boots = np.median(M[RNG.integers(len(curves), size=(B, len(curves)))], axis=1).max(axis=1)
+    return {"est": float(med.max()), "n": ns[int(med.argmax())], "lo": float(np.percentile(boots, 2.5)),
+            "hi": float(np.percentile(boots, 97.5)), "reps": len(curves)}
+
+
+def bound(row):
+    """Operational bottleneck bound at an open-loop step: container k at utilisation U_k of its limit while
+    serving X requests/s saturates at X / U_k, so X <= min_k X / U_k. Returns (bound, container)."""
+    if not row or not row.get("cpu") or not row.get("thr"):
+        return None
+    conts = {k: v for k, v in row["cpu"]["containers"].items() if v.get("util")}
+    if not conts:
+        return None
+    k, v = min(conts.items(), key=lambda kv: row["thr"]["med"] / kv[1]["util"])
+    return {"bound": row["thr"]["med"] / v["util"], "container": k, "rate": row["rate"], "util": v["util"]}
 
 
 def usl(n, lam, a, b):
@@ -216,16 +270,14 @@ def fit_usl(n, x):
             "r2adj": 1 - (1 - r2) * (len(n) - 1) / dof if dof > 0 else math.nan, "points": len(n)}
 
 
-def usl_boot(by_n, B):
-    """Resample, for every concurrency level, which repetition's measurement is used."""
-    levels = sorted(by_n)
+def usl_boot(curves, B):
+    """Refit on whole repetitions drawn with replacement, so the repetition stays the unit."""
     out = []
     for _ in range(B):
-        n = [lv for lv in levels for _ in by_n[lv]]
-        x = [by_n[lv][RNG.integers(len(by_n[lv]))] for lv in levels for _ in by_n[lv]]
+        pick = [curves[i] for i in RNG.integers(len(curves), size=len(curves))]
         try:
-            out.append(fit_usl(n, x))
-        except RuntimeError:
+            out.append(fit_usl([n for c in pick for n in c], [c[n] for c in pick for n in c]))
+        except (RuntimeError, ValueError):
             pass
     return out
 
@@ -243,7 +295,7 @@ def analyse(env, cells, B):
     anymeta = next(iter(cells.values()))["meta"]
     out = {"env": env, "generated": datetime.datetime.now().isoformat(timespec="seconds"), "configs": cfgs,
            "meta": meta_block(cells, anymeta, reps), "hops": {}, "open": {}, "closed": {}, "usl": {},
-           "compare": {}, "crossover": {}, "mesh": {}, "equivalence": {}, "cpu": {}, "dropped": {}}
+           "compare": {}, "crossover": {}, "mesh": {}, "equivalence": {}, "cpu": {}, "dropped": {}, "peak": {}, "bound": {}}
 
     for (rep, cfg), c in cells.items():
         if c["dropped"]:
@@ -252,6 +304,7 @@ def analyse(env, cells, B):
     for cfg in cfgs:
         mine = [cells[k] for k in cells if k[1] == cfg]
         out["hops"][cfg], out["open"][cfg], out["closed"][cfg], out["usl"][cfg] = {}, {}, {}, {}
+        out["peak"][cfg], out["bound"][cfg] = {}, {}
         for wl in WORKLOADS:
             rates = sorted({r for c in mine for r in c["open"].get(wl, {})})
             rows = []
@@ -265,6 +318,8 @@ def analyse(env, cells, B):
                              "err": agg([s["err"] for s in sums]),
                              "sat": sum(s["saturated"] for s in sums) / len(sums),
                              "layers": {k: agg([s["layers"][k] for s in sums]) for k in (*LAYERS, "edge")},
+                             "tail_layers": {k: agg([s["tail_layers"][k] for s in sums]) for k in (*LAYERS, "edge")},
+                             "lag_p99": agg([s["lag_p99"] for s in sums]),
                              "cdf": [float(v) for v in np.percentile(pooled, [*range(0, 100), 99.5, 99.9, 100])],
                              "cpu": cpu_rows(cells, cfg, wl, "open", r, anymeta["args"]["open_step"])})
                 calls = [s["calls"] for s in sums if s["calls"] is not None]
@@ -272,6 +327,8 @@ def analyse(env, cells, B):
                     out["hops"][cfg][wl] = collections.Counter(calls).most_common(1)[0][0]
             if rows:
                 out["open"][cfg][wl] = rows
+                sustained = [r for r in rows if r["sat"] == 0]
+                out["bound"][cfg][wl] = bound(sustained[-1]) if sustained else None
             by_n = collections.defaultdict(list)
             for c in mine:
                 for n, s in c["closed"].get(wl, {}).items():
@@ -284,9 +341,11 @@ def analyse(env, cells, B):
                                           for n in sorted(by_n)]
                 ns = [n for n in sorted(by_n) for _ in by_n[n]]
                 xs = [x for n in sorted(by_n) for x in by_n[n]]
+                curves = [{n: s[0]["thr"] for n, s in c["closed"][wl].items()} for c in mine if c["closed"].get(wl)]
+                out["peak"][cfg][wl] = peak_ci(curves)
                 try:
                     f = fit_usl(ns, xs)
-                    boots = usl_boot(by_n, B) if len(reps) > 1 else []
+                    boots = usl_boot(curves, B) if len(curves) > 1 else []
                     for k in ("alpha", "beta", "nstar", "xmax"):
                         f[f"{k}_ci"] = pct_ci([b[k] for b in boots]) if boots else [math.nan, math.nan]
                     grid = np.unique(np.round(np.geomspace(1, max(by_n), 60), 3))
@@ -337,6 +396,7 @@ def perhop(out):
             cpu_ms = lambda r: sum((r.get("cpu") or {}).get("cpu_ms_per_req", {}).values()) if r and r.get("cpu") else None
             d = {"hops": h, "rate_low": lo["rate"], "rate_high": hi,
                  "net": med(x_lo, "net") / h if med(x_lo, "net") is not None else None,
+                 "net_high": med(x_hi, "net") / h if med(x_hi, "net") is not None else None,
                  "ser": (med(x_lo, "ser") - med(lo, "ser")) / h if med(x_lo, "ser") is not None and med(lo, "ser") is not None else None,
                  "p50": (x_lo["p50"]["med"] - lo["p50"]["med"]) / h if x_lo else None,
                  "cpu": (cpu_ms(x_hi) - cpu_ms(a_hi)) / h if cpu_ms(x_hi) is not None and cpu_ms(a_hi) is not None else None}
@@ -365,6 +425,8 @@ def meta_block(cells, m, reps):
 
 def equivalence(cells, cfg):
     res = {}
+    if cfg == "A":  # the reference; comparing it with itself would only inflate the count
+        return res
     for wl in WORKLOADS:
         match = total = 0
         for (rep, c), cell in cells.items():
@@ -401,21 +463,25 @@ def compare(cells, cfg, wl, B):
     rows = []
     rates = sorted({r for (rep, c), cell in cells.items() if c in (cfg, "A") for r in cell["open"].get(wl, {})})
     for r in rates:
-        x = [cell["open"][wl][r] for (rep, c), cell in cells.items() if c == cfg and r in cell["open"].get(wl, {})]
-        a = [cell["open"][wl][r] for (rep, c), cell in cells.items() if c == "A" and r in cell["open"].get(wl, {})]
+        x = {rep: cell["open"][wl][r] for (rep, c), cell in cells.items() if c == cfg and r in cell["open"].get(wl, {})}
+        a = {rep: cell["open"][wl][r] for (rep, c), cell in cells.items() if c == "A" and r in cell["open"].get(wl, {})}
         if not x or not a:
             continue
-        sat_x, sat_a = any(s[0]["saturated"] for s in x), any(s[0]["saturated"] for s in a)
+        sat_x, sat_a = any(s[0]["saturated"] for s in x.values()), any(s[0]["saturated"] for s in a.values())
         row = {"rate": r, "sat_x": sat_x, "sat_a": sat_a}
         if not sat_x and not sat_a:
-            row["p99"] = ratio_ci([s[1] for s in x], [s[1] for s in a], 99, B)
-            row["p50"] = ratio_ci([s[1] for s in x], [s[1] for s in a], 50, B)
+            lx, la = {k: v[1] for k, v in x.items()}, {k: v[1] for k, v in a.items()}
+            row["p99"] = ratio_ci(lx, la, 99, B, block=r, cap=5000)
+            row["p50"] = ratio_ci(lx, la, 50, B, block=r, cap=5000)
         rows.append(row)
     return rows
 
 
 def crossover(out, cfg, wl):
-    res = {"throughput_n": None, "latency_rate": None, "xmax_ratio": None}
+    res = {"throughput_n": None, "latency_rate": None, "xmax_ratio": None, "peak_ratio": None}
+    pa, px = out["peak"].get("A", {}).get(wl), out["peak"].get(cfg, {}).get(wl)
+    if pa and px:
+        res["peak_ratio"] = px["est"] / pa["est"]
     ua, ux = out["usl"].get("A", {}).get(wl), out["usl"].get(cfg, {}).get(wl)
     if ua and ux and "error" not in ua and "error" not in ux:
         res["xmax_ratio"] = ux["xmax"] / ua["xmax"]
@@ -459,7 +525,9 @@ def mesh(cells, out):
             row = {"rate": rd["rate"], "hops": hops}
             for k in ("net", "db", "e2e"):
                 dv, cv = per_rep("D", k), per_rep("C", k)
-                diff = np.array([RNG.choice(dv) - RNG.choice(cv) for _ in range(2000)])
+                dv, cv = np.array(dv, float), np.array(cv, float)
+                diff = (np.median(dv[RNG.integers(len(dv), size=(10_000, len(dv)))], axis=1)
+                        - np.median(cv[RNG.integers(len(cv), size=(10_000, len(cv)))], axis=1))  # interval of the median difference
                 row[k] = {"est": float(np.median(dv) - np.median(cv)), "lo": float(np.percentile(diff, 2.5)), "hi": float(np.percentile(diff, 97.5))}
             row["net_per_hop"] = {k: v / hops for k, v in row["net"].items()} if hops else None
             row["share"] = row["e2e"]["est"] / float(np.median(per_rep("D", "e2e")))
@@ -482,16 +550,16 @@ def hypotheses(out, cells, B):
                 continue
             r0 = min(rates)
             for cfg in micro:
-                x = [cell["open"][wl][r0][1] for (rep, c), cell in cells.items() if c == cfg and r0 in cell["open"].get(wl, {})]
-                a = [cell["open"][wl][r0][1] for (rep, c), cell in cells.items() if c == "A" and r0 in cell["open"].get(wl, {})]
+                x = {rep: cell["open"][wl][r0][1] for (rep, c), cell in cells.items() if c == cfg and r0 in cell["open"].get(wl, {})}
+                a = {rep: cell["open"][wl][r0][1] for (rep, c), cell in cells.items() if c == "A" and r0 in cell["open"].get(wl, {})}
                 if x and a:
-                    tests.append({"workload": wl, "rate": r0, "config": cfg, **ratio_ci(x, a, 99, B, alpha=0.05 / k)})
+                    tests.append({"workload": wl, "rate": r0, "config": cfg, **ratio_ci(x, a, 99, B_H1, alpha=0.05 / k, block=r0)})
         falsified = [t for t in tests if t["hi"] < 1]
         supported = tests and all(t["lo"] > 1 for t in tests)
         h["H1"] = {"verdict": "falsified" if falsified else "supported" if supported else "inconclusive",
                    "tests": tests, "family": k,
                    "rule": "falsified if any microservice configuration has significantly lower p99 than A at the lowest load level "
-                           f"(two-level bootstrap CI of the p99 ratio, Bonferroni over {k} comparisons)"}
+                           f"(paired two-level block bootstrap CI of the p99 ratio, {B_H1} replicates, Bonferroni over {k} comparisons)"}
     # H2: capacity crossover under the equal budget, and lower coherency (beta) for microservices.
     if "A" in out["configs"] and micro:
         rows, wins, beta_lower = [], False, []
@@ -505,6 +573,7 @@ def hypotheses(out, cells, B):
                 wins |= bool(cr.get("measured_wins")) or cr.get("throughput_n") is not None
                 beta_lower.append(ux["beta"] < ua["beta"])
                 rows.append({"workload": wl, "config": cfg, "beta": ux["beta"], "beta_A": ua["beta"], "xmax_ratio": cr.get("xmax_ratio"),
+                             "peak_ratio": cr.get("peak_ratio"),
                              "throughput_n": cr.get("throughput_n"), "measured_wins": cr.get("measured_wins")})
         verdict = "inconclusive" if not rows else "falsified" if not wins or not any(beta_lower) else "supported"
         h["H2"] = {"verdict": verdict, "rows": rows,
@@ -514,16 +583,18 @@ def hypotheses(out, cells, B):
     if out["mesh"]:
         deep = [r for r in out["mesh"].get("checkout", []) if r["hops"] and r["hops"] >= 5]
         shallow = [r for r in out["mesh"].get("browse", []) if r["net_per_hop"]]
-        share = float(np.median([r["share"] for r in deep])) if deep else math.nan
+        share = deep[0]["share"] if deep else math.nan  # at the lowest rate, as the condition states
+        share_median = float(np.median([r["share"] for r in deep])) if deep else math.nan
         # per-hop cost at each workload's lowest rate, so load does not masquerade as depth
         ph_deep = deep[0]["net_per_hop"]["est"] if deep else math.nan
         ph_shallow = shallow[0]["net_per_hop"]["est"] if shallow else math.nan
         sublinear = ph_deep < 0.8 * ph_shallow  # per-hop cost shrinking by >20% as the chain doubles
         verdict = "inconclusive" if math.isnan(share) else "falsified" if share < 0.25 or sublinear else "supported"
-        h["H3"] = {"verdict": verdict, "share_deep": share, "per_hop_deep_ms": ph_deep, "per_hop_shallow_ms": ph_shallow,
+        h["H3"] = {"verdict": verdict, "share_deep": share, "share_deep_median": share_median, "rate_deep": deep[0]["rate"] if deep else None,
+                   "per_hop_deep_ms": ph_deep, "per_hop_shallow_ms": ph_shallow,
                    "hops_deep": deep[0]["hops"] if deep else None, "hops_shallow": shallow[0]["hops"] if shallow else None,
                    "rule": "falsified if mesh overhead is below 25% of end-to-end latency for call graphs of five or more hops, "
-                           "or if it grows sub-linearly with hop count"}
+                           "or if it grows sub-linearly with hop count (both at the workload's lowest clean rate)"}
     else:
         h["H3"] = {"verdict": "not tested", "rule": "needs configurations C and D"}
     return h
@@ -648,16 +719,64 @@ def paper_outputs(s, gen_dir):
             nums[f"mesh/{wl}/{r['rate']}/share"] = fmt(100 * r["share"], 2)
     for wl, d in s.get("perhop", {}).items():
         for cfg, v in d.items():
-            for k in ("net", "ser", "p50", "cpu"):
-                nums[f"perhop/{wl}/{cfg}/{k}"] = fmt(v[k])
+            for k in ("net", "net_high", "ser", "p50", "cpu"):
+                nums[f"perhop/{wl}/{cfg}/{k.replace('_', '')}"] = fmt(v.get(k))
+        for k in ("net", "net_high", "ser", "p50", "cpu"):  # ranges over the configurations without a mesh
+            vals = [v[k] for c, v in d.items() if c != "D" and v.get(k) is not None]
+            if vals:
+                nums[f"perhop/{wl}/{k.replace('_', '')}/min"], nums[f"perhop/{wl}/{k.replace('_', '')}/max"] = fmt(min(vals)), fmt(max(vals))
     eq_m = sum(v["match"] for d in s["equivalence"].values() for v in d.values())
     eq_t = sum(v["total"] for d in s["equivalence"].values() for v in d.values())
     nums.update({"equiv/match": eq_m, "equiv/total": eq_t})
     for hname, hv in s["hypotheses"].items():
         nums[f"verdict/{hname}"] = hv["verdict"]
-        for key in ("share_deep", "per_hop_deep_ms", "per_hop_shallow_ms"):
+        for key in ("share_deep", "share_deep_median", "per_hop_deep_ms", "per_hop_shallow_ms", "rate_deep"):
             if key in hv:
-                nums[f"{hname}/{key}"] = fmt(100 * hv[key] if key == "share_deep" else hv[key], 3)
+                nums[f"{hname}/{key}"] = fmt(100 * hv[key] if key.startswith("share") else hv[key], 3)
+    h1 = [t["est"] for t in s["hypotheses"].get("H1", {}).get("tests", [])]
+    if h1:
+        nums.update({"h1/min": fmt(min(h1)), "h1/max": fmt(max(h1))})
+    # capacity: measured peaks (primary), bottleneck bounds, use of the budget at 64 clients
+    ratios = []
+    for cfg, d in s.get("peak", {}).items():
+        for wl, pk in d.items():
+            key = f"{wl}/{cfg}"
+            nums.update({f"peak/{key}": fmt(pk["est"]), f"peaklo/{key}": fmt(pk["lo"]), f"peakhi/{key}": fmt(pk["hi"]),
+                         f"peakn/{key}": pk["n"]})
+            pa = s["peak"].get("A", {}).get(wl)
+            if cfg != "A" and pa:
+                ratios.append(pk["est"] / pa["est"])
+                nums[f"peakratio/{key}"] = fmt(pk["est"] / pa["est"])
+                nums[f"peakpct/{key}"] = fmt(100 * pk["est"] / pa["est"], 2)
+            b = s.get("bound", {}).get(cfg, {}).get(wl)
+            if b:
+                nums.update({f"bound/{key}": fmt(b["bound"]), f"boundname/{key}": b["container"].replace("/", "~"),
+                             f"boundrate/{key}": b["rate"]})
+            row64 = next((r for r in s["closed"].get(cfg, {}).get(wl, []) if r["n"] == 64), None)
+            conts = ((row64 or {}).get("cpu") or {}).get("containers", {})
+            if conts:
+                used = sum(v.get("cores", 0) for k, v in conts.items() if not k.endswith("/istio-proxy"))
+                nums[f"budgetuse/{key}"] = fmt(100 * used / ((m["budget"]["app_cpu"] + m["budget"]["db_cpu"]) / 1000), 2)
+    if ratios:
+        nums.update({"peakpct/min": fmt(100 * min(ratios), 2), "peakpct/max": fmt(100 * max(ratios), 2),
+                     "peakfactor/min": fmt(1 / max(ratios), 2), "peakfactor/max": fmt(1 / min(ratios), 2)})
+    # what the p99 is made of: layers of the slowest 1% at the lowest rate, and the generator's dispatch lag
+    for wl in WORKLOADS:
+        low = {cfg: s["open"][cfg][wl][0] for cfg in s["configs"] if s["open"].get(cfg, {}).get(wl)}
+        tot = lambda r, field: sum((r[field].get(k) or {}).get("med", 0) for k in (*LAYERS, "edge"))
+        for cfg, r in low.items():
+            for k in (*LAYERS, "edge"):
+                if r["tail_layers"].get(k):
+                    nums[f"tail/{wl}/{cfg}/{k}"] = fmt(r["tail_layers"][k]["med"])
+            if r.get("lag_p99"):
+                nums[f"lag/{wl}/{cfg}"] = fmt(r["lag_p99"]["med"])
+            nums[f"tailtot/{wl}/{cfg}"] = fmt(tot(r, "tail_layers"))
+            if cfg != "A" and "A" in low:  # the slowest 1% of X minus the slowest 1% of A: total and transit, in ms
+                nums[f"taildiff/{wl}/{cfg}/tot"] = fmt(tot(r, "tail_layers") - tot(low["A"], "tail_layers"))
+                nums[f"taildiff/{wl}/{cfg}/net"] = fmt((r["tail_layers"]["net"] or {}).get("med", 0) - (low["A"]["tail_layers"]["net"] or {}).get("med", 0))
+        lags = [r["lag_p99"]["med"] for r in low.values() if r.get("lag_p99")]
+        if lags:
+            nums[f"lagmax/{wl}"] = fmt(max(lags))
     lines = [f"% generated by analysis/analyze.py from results/raw/{s['env']} on {s['generated']}; do not edit"]
     lines += [f"\\xodef{{{k}}}{{{v}}}" for k, v in sorted(nums.items())]
     (gen_dir / "numbers.tex").write_text("\n".join(lines) + "\n")
@@ -700,15 +819,20 @@ def paper_outputs(s, gen_dir):
 
 
 def ref_rates(s):
-    """Per workload: the lowest rate, and the highest rate at which no configuration saturated."""
+    """Per workload: the lowest rate, and the highest rate up to which every configuration sustained every level
+    (the smallest of the configurations' sustained rates)."""
     out = {}
     for wl in WORKLOADS:
-        common = None
+        sus = []
         for cfg in s["configs"]:
-            ok = {r["rate"] for r in s["open"].get(cfg, {}).get(wl, []) if r["sat"] == 0}
-            common = ok if common is None else common & ok
-        if common:
-            out[wl] = (min(common), max(common))
+            rows, last = s["open"].get(cfg, {}).get(wl, []), None
+            for r in rows:
+                if r["sat"] > 0:
+                    break
+                last = r["rate"]
+            sus.append(last)
+        if sus and None not in sus:
+            out[wl] = (s["open"][s["configs"][0]][wl][0]["rate"], min(sus))
     return out
 
 
@@ -726,9 +850,26 @@ def tables(s, gen_dir):
             beta = "0" if u["beta"] < 1e-9 else fmt(u["beta"])
             rows.append(f"{wl.capitalize() if cfg == s['configs'][0] else ''} & {CFG[cfg]} & {fmt(u['lambda'])} & {fmt(u['alpha'])} {ci(u.get('alpha_ci'))} & "
                         f"{beta} {ci(u.get('beta_ci')) if u['beta'] >= 1e-9 else ''} & {fmt(u['nstar']) if u.get('nstar') else '--'} & {fmt(u['xmax'])} & "
-                        f"{fmt(u['r2adj'])} & {'--' if cfg == 'A' else fmt(x.get('xmax_ratio'))} \\\\")
+                        f"{fmt(u['r2adj'])} \\\\")
         rows.append("\\midrule")
     (gen_dir / "tab-usl.tex").write_text("\n".join(rows[:-1]) + "\n")
+    cap = []
+    for wl in WORKLOADS:
+        pa = s["peak"].get("A", {}).get(wl)
+        for cfg in s["configs"]:
+            pk, b = s["peak"].get(cfg, {}).get(wl), s["bound"].get(cfg, {}).get(wl)
+            if not pk:
+                continue
+            row64 = next((r for r in s["closed"].get(cfg, {}).get(wl, []) if r["n"] == 64), None)
+            conts = ((row64 or {}).get("cpu") or {}).get("containers", {})
+            used = sum(v.get("cores", 0) for k, v in conts.items() if not k.endswith("/istio-proxy")) if conts else None
+            budget = (s["meta"]["budget"]["app_cpu"] + s["meta"]["budget"]["db_cpu"]) / 1000
+            cap.append(f"{wl.capitalize() if cfg == s['configs'][0] else ''} & {CFG[cfg]} & {fmt(pk['est'])} [{fmt(pk['lo'])}, {fmt(pk['hi'])}] & {pk['n']} & "
+                       f"{'--' if cfg == 'A' or not pa else fmt(pk['est'] / pa['est'])} & "
+                       f"{fmt(b['bound']) + ' (' + chr(92) + 'texttt{' + b['container'].split('/')[0] + '})' if b else '--'} & "
+                       f"{fmt(100 * used / budget, 2) + chr(92) + '%' if used is not None else '--'} \\\\")
+        cap.append("\\midrule")
+    (gen_dir / "tab-capacity.tex").write_text("\n".join(cap[:-1]) + "\n")
     h1 = s["hypotheses"].get("H1", {}).get("tests", [])
     (gen_dir / "tab-h1.tex").write_text("\n".join(
         f"{t['workload'].capitalize()} & {t['rate']} & {CFG[t['config']]} & {fmt(t['est'])} & [{fmt(t['lo'])}, {fmt(t['hi'])}] \\\\" for t in h1) + "\n")
@@ -757,6 +898,14 @@ def tables(s, gen_dir):
     lines = []
     for wl, (lo, hi) in refs.items():
         lines += [f"\\xodef{{ref/{wl}/low}}{{{lo}}}", f"\\xodef{{ref/{wl}/high}}{{{hi}}}"]
+        for cfg in s["configs"]:  # resource cost at the reference rate, so the text need not name the rate
+            r = next((x for x in s["open"][cfg][wl] if x["rate"] == hi), None)
+            ms = ((r or {}).get("cpu") or {}).get("cpu_ms_per_req", {})
+            for tier, v in [*ms.items(), ("total", sum(ms.values()) if ms else None)]:
+                lines.append(f"\\xodef{{cpumsref/{wl}/{cfg}/{tier}}}{{{fmt(v)}}}")
+            mem = s["cpu"].get(cfg, {}).get(f"{wl}/open/{hi}", {})
+            if mem:
+                lines.append(f"\\xodef{{memref/{wl}/{cfg}}}{{{fmt(sum(v for k, v in mem.items() if k.endswith('_mib')) / 1024)}}}")
     with open(gen_dir / "numbers.tex", "a") as f:
         f.write("\n".join(lines) + "\n")
 
@@ -764,8 +913,14 @@ def tables(s, gen_dir):
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--env", default="kind")
-    p.add_argument("--boot", type=int, default=400, help="bootstrap iterations")
+    p.add_argument("--boot", type=int, default=1000, help="bootstrap replicates for USL fits and descriptive ratios (H1 uses B_H1)")
+    p.add_argument("--outputs-only", action="store_true", help="rewrite paper numbers and tables from the existing summary.json")
     a = p.parse_args()
+    if a.outputs_only:
+        s = json.loads((ROOT / "results" / a.env / "summary.json").read_text())
+        paper_outputs(s, ROOT / "paper" / "generated" / a.env)
+        tables(s, ROOT / "paper" / "generated" / a.env)
+        return
     raw = ROOT / "results" / "raw" / a.env
     cells = load_env(raw)
     if not cells:
