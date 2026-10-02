@@ -18,10 +18,9 @@ virtualisation~\cite{Ueda2016}. Villamizar et al.\ deployed monolithic and micro
 a Play application on AWS, each on the smallest instances that met a service-level target. The microservices were
 slower on a CPU-heavy service, faster on a database-bound one, and 17\% cheaper~\cite{Villamizar2015}. Al-Debagy and Martinek measured about 6\% higher
 throughput for the monolith in a concurrency test and no significant difference in a load
-test~\cite{AlDebagy2018}. Jatkiewicz and Okr\'oj built the same business logic in both styles and
-tested it with JMeter locally and on Microsoft Azure; the monolith was more efficient in almost all
-cases, and performance was comparable only when requests spent a long time in business
-logic~\cite{Jatkiewicz2023}. Berry et al.\ reported that, without replication, their microservice
+test~\cite{AlDebagy2018}. Jatkiewicz and Okr\'oj ran a two-endpoint application, a city lookup and a route computed by a
+heuristic, on a desktop and on Azure App Service. Locally the monolith served 808 against 304 requests per second
+on the lookup, while on the compute-heavy route the two styles could not be told apart~\cite{Jatkiewicz2023}. Berry et al.\ reported that, without replication, their microservice
 version outperformed the monolith, that replicated microservices hit a ceiling unless the API
 gateway was also replicated, and that with a replicated gateway they reached their best performance
 with fewer replicas than the monolith needed~\cite{Berry2024}. Their result makes the outcome of a
@@ -160,8 +159,9 @@ Villamizar et al.~\cite{Villamizar2015} & Monolith vs.\ 2 services and gateway; 
   JMeter at fixed request rates & Mean, p90 & No: smallest instances meeting an SLA & One \\
 Al-Debagy \& Martinek~\cite{AlDebagy2018} & Monolith vs.\ services; JHipster (Spring Boot) & One Docker host &
   JMeter, 100--7{,}000 threads, no wait (closed) & Mean & Not stated & Five thread counts \\
-Jatkiewicz \& Okr\'oj$^{\dagger}$~\cite{Jatkiewicz2023} & Monolith vs.\ services, same logic & Local; Azure &
-  JMeter & ? & ? & ? \\
+Jatkiewicz \& Okr\'oj~\cite{Jatkiewicz2023} & Monolith vs.\ services and gateway; Spring Boot, embedded
+  database & Desktop; Azure App Service & JMeter, fixed request counts (loop not stated) & None (throughput) &
+  Locally yes; in the cloud similar cost & One per test case \\
 Berry et al.~\cite{Berry2024} & Monolith vs.\ gateway and 2 services; Node.js, shared PostgreSQL & One host,
   Docker Compose & Gatling, 200 users/s, 5\,s think time & Response-time bands, Apdex & No: replicas varied, no
   limits & One profile; sweep over replicas \\
