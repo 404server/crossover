@@ -224,7 +224,10 @@ requests per second completes without errors and with a p99 below 500\,ms, so th
 cannot leak into the next measurement. The local campaign ran \xo{cells} cells (\xo{reps} repetitions) in
 \xo{hours}\,h and the cloud campaign \xo{eks/cells} cells in \xo{eks/hours}\,h. The cloud runner also survives a
 loss of its connection to the cluster: it then discards the unfinished cell and repeats it once the API server is
-reachable again.
+reachable again. A first cloud campaign was discarded: its analysis found step files cut short on their way
+from the load generator, because long exec streams to the remote cluster ended early without an error. The runner
+now checks the size and integrity of every transfer and resumes an incomplete one. All cloud results come from the
+repeated campaign.
 
 \subsection{Resource treatments}
 \label{sec:treatments}

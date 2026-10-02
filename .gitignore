@@ -21,4 +21,4 @@ notes/*
 # Zenodo upload staging (run/archive.sh)
 zenodo/
 run/hpa.ready
-*/kind-hpa-smoke/
+**/kind-hpa-smoke/
