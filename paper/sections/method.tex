@@ -103,20 +103,20 @@ separately as part of the mesh's cost.
 The JVM settings are identical everywhere: G1 is selected explicitly (under small CPU limits the JVM would
 otherwise pick the serial collector for the fine-grained services and G1 for the monolith), the heap is capped
 at 50\% of the container limit, Tomcat has its default 200 worker threads, and HikariCP its default ten
-connections. Two settings were changed from their defaults after calibration: Tomcat accepts at most 1{,}000
-connections per process, so that an overloaded service queues work in the kernel backlog instead of buffering
-it in its own memory, and the server does not close a keep-alive connection after a fixed number of requests
-(only after 75\,s idle), because the JDK HTTP client does not retry a POST that races with a server-side close.
+connections. Two settings were changed from their defaults after calibration. Tomcat accepts at most 1{,}000
+connections per process, so that an overloaded service queues work in the kernel backlog instead of buffering it
+in its own memory. And the server does not close a keep-alive connection after a fixed number of requests (only
+after 75\,s idle), because the JDK HTTP client does not retry a POST that races with a server-side close.
 
 \subsection{Per-layer latency accounting}
 \label{sec:timing}
 
 Every response carries a W3C \texttt{Server-Timing} header~\cite{W3CServerTiming} with six durations,
 aggregated over the process's own work and everything it called. For a process $s$ handling one request, a
-servlet filter records the arrival time and the handler measures five intervals with
-\texttt{System.nanoTime}: time before the handler runs (framework dispatch, $\mathit{oth}_s$), JSON encoding
-and decoding on both sides of every hop it takes part in ($\mathit{ser}_s$), JDBC calls including connection-pool
-wait ($\mathit{db}_s$), the round trip $\mathit{rtt}_c$ of every outbound call $c$, and the handler's own duration.
+servlet filter records the arrival time, and the handler measures five intervals with \texttt{System.nanoTime}.
+They are the time before the handler runs (framework dispatch, $\mathit{oth}_s$), JSON encoding and decoding on
+both sides of every hop it takes part in ($\mathit{ser}_s$), JDBC calls including connection-pool wait
+($\mathit{db}_s$), the round trip $\mathit{rtt}_c$ of every outbound call $c$, and the handler's own duration.
 Application time $\mathit{app}_s$ is the handler duration minus its database time and its outbound calls. By
 construction
 \begin{equation}
@@ -223,8 +223,8 @@ cgroup \texttt{cpu.stat} counters before and after the step (CPU time, CFS perio
 the pods' restart counts. A step during which any pod restarted, or during which the host was suspended (detected by
 comparing wall-clock time with an uptime clock that stops during sleep), is recorded as an incident and excluded from
 the analysis. After a saturated step, and before each closed-loop sweep, the runner waits until a 3\,s probe at 20
-requests per second completes without errors and with a p99 below 500\,ms, so that the backlog of an overloaded step
-cannot leak into the next measurement. The local campaign ran \xo{cells} cells (\xo{reps} repetitions) in
+requests per second completes without errors and with a p99 below 500\,ms. The backlog of an overloaded step
+therefore cannot leak into the next measurement. The local campaign ran \xo{cells} cells (\xo{reps} repetitions) in
 \xo{hours}\,h and the cloud campaign \xo{eks/cells} cells in \xo{eks/hours}\,h. The cloud runner also survives a
 loss of its connection to the cluster: it then discards the unfinished cell and repeats it once the API server is
 reachable again. A first cloud campaign was discarded: its analysis found step files cut short on their way

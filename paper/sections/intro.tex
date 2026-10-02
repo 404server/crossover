@@ -10,13 +10,11 @@ by over 90\%''~\cite{Kolny2023}, and Su et al.\ analyse four such moves back to 
 
 The published comparisons agree more than they appear to. Where both styles run on the same hardware, the
 monolith is mostly faster or equal; the microservice version comes out ahead when it receives more instances or
-other resources (Section~\ref{sec:related}). What the comparisons rarely show is how large the gap is and where it
-comes from. Most report throughput or mean response time rather than the latency distribution. Many use
-closed-loop load generators, which slow down with the system they measure and so hide the
-tail~\cite{Schroeder2006,Tene2015}. None that we know of splits end-to-end latency into the layers where
-distribution adds cost. And the resources given to each architecture are rarely held equal or even reported,
-although a microservice deployment of the same code runs more processes, each with its own runtime, connection
-pools and share of the CPU. Reviews of the migration literature accordingly describe its results as
+other resources (Section~\ref{sec:related}). What the comparisons rarely show is how large the gap is and where it comes from. Of the twelve we
+review in Section~\ref{sec:related}, only two report a tail percentile, and most drive load with closed loops,
+which slow down with the system they measure and so hide the tail~\cite{Schroeder2006,Tene2015}. None splits
+end-to-end latency into the layers where distribution adds cost. Only one holds the resources of both styles equal throughout, and two more only in their local runs, although a microservice deployment of the same code runs more processes, each with its own runtime,
+connection pools and share of the CPU. Reviews of the migration literature accordingly describe its results as
 conflicting~\cite{Rodrigues2024} and note a lack of comparative studies~\cite{RodriguesJSS2025}.
 
 This article reports a controlled comparison designed around those problems. It implements and executes a
@@ -27,20 +25,21 @@ coarse-grained services (B), eight fine-grained services (C), and the same eight
 mesh (D). All four run the same binary with identical business code; only the mapping of modules to processes
 differs. Every configuration receives the same CPU budget. Each process reports, in a W3C \texttt{Server-Timing}
 header propagated through the call tree, how long it spent in application code, database calls, serialisation,
-framework dispatch and waiting for its callees, which yields an exact per-request decomposition of end-to-end
-latency without synchronised clocks. Latency is measured under open-loop load, capacity under closed-loop load,
-and the Universal Scalability Law (USL)~\cite{Gunther2007} is fitted to the latter.
+framework dispatch and waiting for its callees. This yields an exact per-request decomposition of end-to-end
+latency without synchronised clocks. Latency is measured under open-loop load and capacity under closed-loop load, and the CPU counters
+of every container give an operational bound that names each configuration's bottleneck.
 
 The study answers four research questions:
 \begin{description}
 \item[RQ1] How much tail latency does decomposition add at low load, when every configuration has spare
 capacity?
 \item[RQ2] Under an equal resource budget, does any decomposed configuration reach a higher throughput than the
-monolith, and where do their capacity curves cross? Does the answer change when the budget is allocated in
+monolith, and if so, from what load on? Does the answer change when the budget is allocated in
 proportion to demand, or when an autoscaler can add replicas up to a shared ceiling?
 \item[RQ3] In which layers does the additional latency of decomposition arise, and what limits each
 configuration's capacity?
-\item[RQ4] How much does a sidecar service mesh add, and does its cost grow with the depth of the call graph?
+\item[RQ4] How much does a sidecar service mesh add, and does its cost grow with the number of remote calls on a
+request's path?
 \end{description}
 RQ1, RQ2 and RQ4 correspond to hypotheses H1--H3 of the protocol, each stated with an explicit falsification
 condition (Section~\ref{sec:hypotheses}).

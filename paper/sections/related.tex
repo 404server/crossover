@@ -20,10 +20,10 @@ slower on a CPU-heavy service, faster on a database-bound one, and 17\% cheaper~
 throughput for the monolith in a concurrency test and no significant difference in a load
 test~\cite{AlDebagy2018}. Jatkiewicz and Okr\'oj ran a two-endpoint application, a city lookup and a route computed by a
 heuristic, on a desktop and on Azure App Service. Locally the monolith served 808 against 304 requests per second
-on the lookup, while on the compute-heavy route the two styles could not be told apart~\cite{Jatkiewicz2023}. Berry et al.\ reported that, without replication, their microservice
-version outperformed the monolith, that replicated microservices hit a ceiling unless the API
-gateway was also replicated, and that with a replicated gateway they reached their best performance
-with fewer replicas than the monolith needed~\cite{Berry2024}. Their result makes the outcome of a
+on the lookup, while on the compute-heavy route the two styles could not be told apart~\cite{Jatkiewicz2023}. Berry et al.\ found their unreplicated microservice
+version faster than the monolith, which they attribute mostly to the gateway buffering requests. Replicated
+microservices hit a ceiling unless the gateway was also replicated, and with a replicated gateway they matched the
+monolith with fewer replicas~\cite{Berry2024}. Their result makes the outcome of a
 comparison depend on the scaling strategy. Bj{\o}rndal et al.\ derived performance metrics
 (latency, throughput, scalability, CPU, memory and network use) from a literature review and an
 industry survey and benchmarked a monolith and its microservice counterpart locally and on Azure
@@ -57,10 +57,9 @@ A second line of work holds the architectural style fixed and varies how finely 
 In a controlled experiment on Train Ticket, Zhao et al.\ found that a fine-grained decomposition
 had 5.2\,ms (14\%) higher response time and used 461\,J (13\%) more energy than a coarse one, and
 that raising the request rate from 40 to 400 requests per second added 41.2\,ms (98\%) to response
-time~\cite{Zhao2025}. Ghemawat et al.\ proposed writing an application as a logical monolith whose components are placed in
-one process or in several at deployment time, and reported up to $15\times$ lower latency and $9\times$ lower cost
-than a microservice deployment of the same application with their Service Weaver
-prototype~\cite{Ghemawat2023}. Our testbed uses the same mechanism (one binary, placement chosen per deployment)
+time~\cite{Zhao2025}. Ghemawat et al.\ proposed writing an application as a logical monolith whose components are placed in one
+process or in several at deployment time. With their Service Weaver prototype they reported up to $15\times$ lower
+latency and $9\times$ lower cost than a microservice deployment of the same application~\cite{Ghemawat2023}. Our testbed uses the same mechanism (one binary, placement chosen per deployment)
 to hold the code constant across configurations. Medeiros R\^ego et al.\ deployed Online Boutique at several
 granularity levels with Service Weaver on Amazon EKS. On one node the monolith had the lowest p95 at every load,
 and distributed placements did better at high load only when they ran on two nodes, that is, with twice the
@@ -108,10 +107,9 @@ found that few studies follow them~\cite{Papadopoulos2021}. Cloud measurements v
 instance type and tenancy~\cite{Laaber2019,Leitner2016}. Eismann et al.\ showed that establishing reliable performance
 baselines is difficult for microservice applications, using TeaStore as their
 subject~\cite{Eismann2020}. Kalibera and Jones showed that benchmark results vary at more than one
-level of repetition, for example between iterations within a process and between processes, and
-gave a method to plan repetitions and to report effect sizes with confidence
-intervals~\cite{Kalibera2013}; the analysis in Section~\ref{sec:method} follows this view by
-treating a fresh deployment as the unit of replication.
+level of repetition, for example between iterations within a process and between processes, and gave a method to
+plan repetitions and report effect sizes with confidence intervals~\cite{Kalibera2013}. Our analysis follows this
+view and treats a fresh deployment as the unit of replication.
 
 Closer to the present design, Henning and Hasselbring defined a configurable method for
 benchmarking the scalability of cloud-native applications, which runs isolated experiments for each
@@ -200,8 +198,8 @@ framework) across configurations built from identical code; Ueda et al.\ break d
 Faustino et al.\ report the serialisation share of one operation,
 which is what is needed to say where the extra time of a distributed configuration goes. Fleet-scale studies
 count serialisation and RPC processing among the costs every request pays~\cite{Kanev2015,Seemakhupt2023}, but
-they compare services with each other, not one application in different topologies. Fourth, only Ueda et al., and Blinowski et al.\ in their local runs, hold the resources of the two styles
-equal; the others give the microservice version different instances, more replicas or more hardware, or do not
+they compare services with each other, not one application in different topologies. Fourth, only Ueda et al.\ hold the resources of the two styles equal throughout, and Blinowski et al.\ and
+Jatkiewicz and Okr\'oj only in their local runs; the others give the microservice version different instances, more replicas or more hardware, or do not
 say, so a difference cannot be traced to the architecture rather than the allocation; Berry et al.'s
 dependence on the replicated gateway~\cite{Berry2024} and Blinowski et al.'s cloud results, where
 the gateway ran on its own virtual machine~\cite{Blinowski2022}, show how strongly allocation can

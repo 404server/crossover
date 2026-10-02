@@ -13,8 +13,10 @@ latency fell with load, as the host's low-load penalty receded.
 H3 requires the mesh to account for at least a quarter of end-to-end latency on the six-hop path and its per-hop
 cost not to shrink as the path gets deeper. On checkout at the lowest rate, where the condition is evaluated, the
 mesh accounted for \xo{H3/share_deep}\% of end-to-end latency (median over all clean rates:
-\xo{H3/share_deep_median}\%). At each workload's lowest rate the per-hop transit cost was \xo{H3/per_hop_shallow_ms}\,ms on
-the three-hop browse path and \xo{H3/per_hop_deep_ms}\,ms on the six-hop checkout path: it did not shrink as the path got longer, so the total grows at least linearly with the number of hops. The two
+\xo{H3/share_deep_median}\%). At each workload's lowest rate the per-hop transit cost was
+\xo{H3/per_hop_shallow_ms}\,ms on the three-hop browse path and \xo{H3/per_hop_deep_ms}\,ms on the six-hop
+checkout path. It did not shrink as the path got longer, so the total grows at least linearly with the number of
+hops. The two
 per-hop intervals overlap, so the data show linear growth, not compounding. \textbf{H3 is supported.} Our original
 statement of H3 also predicted that the mesh would become the single largest contributor above four hops. On
 checkout at the lowest rate the mesh's \xo{mesh/checkout/25/e2e}\,ms is indeed larger than any single layer of

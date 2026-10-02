@@ -35,10 +35,10 @@ destination is a service virtual IP that kube-proxy rules translate to a pod add
 overheads depend on the CNI plugin~\cite{Qi2021}.
 
 A sidecar service mesh adds two proxies to every hop: the caller's outbound sidecar and the
-callee's inbound sidecar. Istio's published benchmarks, measured with HTTP/1.1, 1\,kB payloads,
-1{,}000 requests per second and mutual TLS, report that the client- and server-side sidecars
-together add 2.65\,ms at P90 and 2.91\,ms at P99 in Istio 1.10.3~\cite{Istio110Perf}, and 0.18\,ms
-and 0.25\,ms in Istio 1.22.3~\cite{Istio122Perf}. The overhead is therefore strongly
+callee's inbound sidecar. Istio's published benchmarks use HTTP/1.1, 1\,kB payloads,
+1{,}000 requests per second and mutual TLS. In Istio 1.10.3 the client- and server-side sidecars together added
+2.65\,ms at P90 and 2.91\,ms at P99~\cite{Istio110Perf}; in Istio 1.22.3 they added 0.18\,ms and
+0.25\,ms~\cite{Istio122Perf}. The overhead is therefore strongly
 version-dependent. Zhu et al.\ found that sidecars raise end-to-end latency by 27\% to 269\% and
 CPU usage by 42\% to 163\%, depending on protocol mode and enabled filters; protocol parsing
 dominates in HTTP and gRPC mode, and inter-process communication and socket writes dominate in TCP
@@ -62,9 +62,9 @@ records them for every container (Section~\ref{sec:method}).
 
 Throttling matters for latency more than average utilisation suggests. A multi-threaded runtime
 such as the JVM, with request, garbage-collection and compiler threads, can use a small quota in a
-burst early in a period. A request that arrives afterwards waits for the next period, so a
-fractional CPU limit can add up to most of a 100\,ms period to that request's latency while the
-container's utilisation averaged over a second stays well below its limit. Ugedal and Kumar studied
+burst early in a period. A request that arrives afterwards waits for the next period. A
+fractional CPU limit can thus add most of a 100\,ms period to that request's latency, while the container's
+utilisation averaged over a second stays well below its limit. Ugedal and Kumar studied
 throttling in CFS bandwidth control and proposed kernel changes that reduce throttling the quota
 does not require~\cite{Ugedal2022}. Splitting a fixed CPU budget across more services produces
 smaller per-service limits, so decomposition interacts with this mechanism directly.
@@ -78,10 +78,9 @@ system requests arrive at a rate that does not depend on completions. Schroeder 
 showed that the two models behave very differently and that the model must match the system being
 evaluated~\cite{Schroeder2006}.
 
-A closed-loop generator used to measure latency suffers from coordinated omission: when the system
-stalls, the generator stops sending, so it records one slow request instead of all the requests
-that real users would have issued during the stall, and the reported tail is too
-optimistic~\cite{Tene2015}. Constant-rate generators avoid this. wrk2 measures latency from the time each request was
+A closed-loop generator used to measure latency suffers from coordinated omission. When the system
+stalls, the generator stops sending, so it records one slow request instead of all the requests real users would
+have issued during the stall, and the reported tail is too optimistic~\cite{Tene2015}. Constant-rate generators avoid this. wrk2 measures latency from the time each request was
 scheduled~\cite{wrk2}. Vegeta, used in this study, issues requests at a constant rate regardless of response
 times and measures latency from the actual send~\cite{Vegeta}. Load testers have further pitfalls that distort
 tail measurements~\cite{Zhang2016Treadmill,Kogias2019}. A closed loop is the natural way to measure throughput as
