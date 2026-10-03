@@ -385,8 +385,7 @@ def perhop(out):
         if not rows_a:
             continue
         lo = rows_a[0]
-        common = set.intersection(*[{r["rate"] for r in out["open"][c].get(wl, []) if r["sat"] == 0} for c in out["configs"]])
-        hi = max(common) if common else None
+        hi = ref_rates(out).get(wl, (None, None))[1]  # the reference rate of the cost table
         a_hi = next((r for r in rows_a if r["rate"] == hi), None)
         for cfg in out["configs"]:
             h = out["hops"].get(cfg, {}).get(wl)
@@ -677,8 +676,9 @@ def paper_outputs(s, gen_dir):
                 if r["sat"] > 0:
                     break
                 sus = r["rate"]
-            nums[f"sustained/{wl}/{cfg}"] = sus if sus is not None else "--"
-            nums[f"gridtop/{wl}"] = max(ok + [nums.get(f"gridtop/{wl}", 0)])
+            nums[f"sustained/{wl}/{cfg}"] = fmt(sus)
+    for wl in WORKLOADS:
+        nums[f"gridtop/{wl}"] = fmt(max(r["rate"] for d in s["open"].values() for r in d.get(wl, [])))
     for cfg, d in s["closed"].items():
         for wl, rows in d.items():
             for r in rows:
@@ -741,6 +741,13 @@ def paper_outputs(s, gen_dir):
     h1 = [t["est"] for t in s["hypotheses"].get("H1", {}).get("tests", [])]
     if h1:
         nums.update({"h1/min": fmt(min(h1)), "h1/max": fmt(max(h1))})
+    h1bc = [t["est"] for t in s["hypotheses"].get("H1", {}).get("tests", []) if t["config"] in ("B", "C")]
+    if h1bc:  # without the mesh, for comparison with treatments that ran A-C only
+        nums.update({"h1/BC/min": fmt(min(h1bc)), "h1/BC/max": fmt(max(h1bc))})
+    for cfgs, tag in ((("B", "C"), "nomesh"), (("D",), "mesh")):  # CPU per remote call over both workloads
+        v = [d[c]["cpu"] for d in s.get("perhop", {}).values() for c in cfgs if c in d and d[c].get("cpu") is not None]
+        if v:
+            nums.update({f"perhop/cpu/{tag}/min": fmt(min(v)), f"perhop/cpu/{tag}/max": fmt(max(v))})
     # capacity: measured peaks (primary), bottleneck bounds, use of the budget at 64 clients
     ratios = []
     for cfg, d in s.get("peak", {}).items():
@@ -756,7 +763,7 @@ def paper_outputs(s, gen_dir):
             b = s.get("bound", {}).get(cfg, {}).get(wl)
             if b:
                 nums.update({f"bound/{key}": fmt(b["bound"]), f"boundname/{key}": b["container"].replace("/", "~"),
-                             f"boundrate/{key}": b["rate"]})
+                             f"boundrate/{key}": fmt(b["rate"])})
             row64 = next((r for r in s["closed"].get(cfg, {}).get(wl, []) if r["n"] == 64), None)
             conts = ((row64 or {}).get("cpu") or {}).get("containers", {})
             if conts:
@@ -923,6 +930,7 @@ def main():
     a = p.parse_args()
     if a.outputs_only:
         s = json.loads((ROOT / "results" / a.env / "summary.json").read_text())
+        s["perhop"] = clean(perhop(s))  # cheap; follows the current reference-rate rule
         paper_outputs(s, ROOT / "paper" / "generated" / a.env)
         tables(s, ROOT / "paper" / "generated" / a.env)
         return

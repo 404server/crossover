@@ -17,10 +17,10 @@ mesh accounted for \xo{H3/share_deep}\% of end-to-end latency (median over all c
 \xo{H3/per_hop_shallow_ms}\,ms on the three-hop browse path and \xo{H3/per_hop_deep_ms}\,ms on the six-hop
 checkout path. It did not shrink as the path got longer, so the total grows at least linearly with the number of
 hops. The two
-per-hop intervals overlap, so the data show linear growth, not compounding. \textbf{H3 is supported.} Our original
+per-hop intervals overlap, so the data are consistent with linear growth and show no sign of compounding. \textbf{H3 is supported.} Our original
 statement of H3 also predicted that the mesh would become the single largest contributor above four hops. On
 checkout at the lowest rate the mesh's \xo{mesh/checkout/25/e2e}\,ms is indeed larger than any single layer of
-configuration~C (whose largest, database time, is \xo{layer/checkout/C/25/db}\,ms).
+configuration~C (Figure~\ref{fig:layers}).
 
 The sidecars' CPU is the larger cost. At \xo{ref/browse/high} browse requests per second they consumed
 \xo{cpumsref/browse/D/mesh}\,ms of CPU per request, more than the whole application tier

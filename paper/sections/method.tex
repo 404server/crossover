@@ -269,13 +269,11 @@ demand-proportional shares. A namespace \texttt{ResourceQuota} caps the CPU requ
 at the same ceiling for every configuration, three times the application budget plus the database budget. Database
 pods are not scaled, so the monolith keeps its single shared database. Two parameters differ from the static
 treatments, both so that the monolith can use the ceiling. The application budget is 3.5 cores, so that a monolith
-replica fits twice on an 8-vCPU node next to its system pods. The database budget is 4 cores, because with 2 cores
-the monolith is database-bound at \xo{chot/browse/A/64/apputil}\% application utilisation, below the autoscaler's
-target. The ceiling is therefore $3 \times 3.5 + 4 = 14.5$ cores. The database tier still bounds every
-configuration, and the decomposed ones, which spend more database CPU per request, reach that bound earlier.
+replica fits twice on an 8-vCPU node next to its system pods. The database budget is 4 cores, because with 2 cores the cloud monolith is database-bound at \xo{eks/chot/browse/A/64/apputil}\% application
+utilisation, below the autoscaler's target. The ceiling is therefore $3 \times 3.5 + 4 = 14.5$ cores. 
 
 Load is open loop and rises without pause or reset, browse from 500 to 16{,}000 requests per second and checkout
-from 200 to 6{,}400, each level 1.4--1.5 times the previous one and the tops at least 1.5 times the monolith's
+from 200 to 6{,}400, each level 1.33--1.5 times the previous one and the tops at least 1.5 times the monolith's
 expected capacity. Each level runs for 180\,s, of which the last 60\,s are recorded, after the autoscaler has had
 time to react; replicas carry over to the next level. A level is \emph{sustained} if, in that window, at most 5\%
 of requests fail, throughput reaches 90\% of the rate and p99 is at most 100\,ms, and a ramp stops after two

@@ -187,8 +187,8 @@ This study & Monolith; 4 services; 8; 8 with Istio; one binary & kind on one hos
 \end{table*}
 
 Table~\ref{tab:related} shows four gaps, which the present study is designed to address. First, none of the
-twelve comparisons locates a load at which the two styles cross. Only two pace requests at a target rate
-(Villamizar et al.\ and Bj{\o}rndal et al.), and the others use closed loops or do not say. DeathStarBench drives its
+twelve comparisons locates a load at which the two styles cross. Only two use a constant-rate generator (Villamizar et al.\ and Bj{\o}rndal et al.); Zhao et al.\ pace a closed
+loop, Berry et al.\ inject users at a fixed rate with think time, and the others use closed loops or do not say. DeathStarBench drives its
 services with open-loop generators but compares its monolithic baselines with the microservices at a low and a
 high load and during recovery from an overload, not along a load sweep~\cite{Gan2019}. Second, only two of the
 twelve report a tail percentile (p90 and p95), although Section~\ref{sec:bg-costs} identifies the tail as the

@@ -1,21 +1,17 @@
-Teams that run an application on Kubernetes must decide how to cut it into services, and with that how a fixed CPU
-budget is shared among processes. Comparisons on equal hardware mostly find a monolith faster, but rarely show by
-how much, why, or whether a better allocation closes the gap. We compare four deployments of one application that
-differ only in topology: a monolith, four services, eight services, and eight services with an Istio sidecar mesh.
-They are built as one binary whose modules are placed at deployment time, and their responses are checked to be
-identical. A W3C Server-Timing header splits every request's latency into application, database, serialisation,
-network, framework and edge time without clock synchronisation, and cgroup counters record each container's CPU use
-and throttling. In \the\numexpr\xo{cells}+\xo{prop/cells}+\xo{work/cells}+\xo{workprop/cells}+\xo{eks/cells}+\xo{hpa/cells}\relax{} fresh deployments on a local cluster and on Amazon EKS, decomposition raised
-low-load p99 latency \xo{h1/min}--\xo{h1/max} times locally and \xo{eks/h1/min}--\xo{eks/h1/max} times in the cloud,
-mostly as inter-service transit of a few tenths of a millisecond per call. Under an equal CPU budget, capacity fell
+Teams that run an application on Kubernetes must decide how to cut it into services, and so how a fixed CPU budget
+is shared among processes. Comparisons on equal hardware mostly find a monolith faster, but rarely show by how
+much, why, or whether a better allocation closes the gap. We compare a monolith, four services, eight services, and
+eight services with an Istio sidecar mesh, built from one binary whose modules are placed at deployment time. A Server-Timing header splits each
+request's latency into layers, and cgroup counters record CPU use and throttling. In \the\numexpr\xo{cells}+\xo{prop/cells}+\xo{work/cells}+\xo{workprop/cells}+\xo{eks/cells}+\xo{hpa/cells}\relax{} fresh
+deployments on a local cluster and on Amazon EKS, decomposition raised low-load p99 latency
+\xo{h1/min}--\xo{h1/max} times locally (equal split) and \xo{eks/h1/min}--\xo{eks/h1/max} times in the cloud,
+mostly as inter-service transit. Under an equal CPU budget, capacity fell
 to \xo{peakpct/min}--\xo{peakpct/max}\% (local) and \xo{eks/peakpct/min}--\xo{eks/peakpct/max}\% (cloud) of the
-monolith's, bounded by the CPU quota of the edge service. Allocating CPU in proportion to demand raised it to
+monolith's, bounded by the edge service's CPU quota. Allocating CPU by demand raised it to
 \xo{prop/peakpct/min}--\xo{prop/peakpct/max}\%, and with 1\,ms of CPU in every module operation to
-\xo{workprop/peakpct/min}--\xo{workprop/peakpct/max}\%.
-With autoscalers and a shared CPU ceiling, the monolith sustained \xo{hpa/sustained/browse/A} browse requests per
-second on one replica, while the decomposed configurations scaled to the ceiling and sustained at most
-\xo{hpa/sustained/browse/B}.
-No decomposed configuration overtook the monolith. A sidecar mesh added
-\xo{mesh/perhop/min}--\xo{eks/mesh/perhop/max}\,ms per call and more CPU than the application. The performance cost
-of decomposition is a price per call that shrinks as services do more work but did not vanish in any setting we
-measured. The testbed, data and analysis are public.
+\xo{workprop/peakpct/min}--\xo{workprop/peakpct/max}\%. With autoscalers under a shared ceiling, the monolith
+sustained \xo{hpa/sustained/browse/A} browse requests per second on one replica, the decomposed configurations every
+level only up to \xo{hpa/sustained/browse/B}. No decomposition overtook the monolith. A sidecar mesh added
+\xo{mesh/perhop/min}--\xo{eks/mesh/perhop/max}\,ms per call and more CPU than the application. The performance
+cost of decomposition is a price per call that shrinks as services do more work but did not vanish in any setting
+we measured.

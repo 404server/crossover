@@ -13,7 +13,8 @@ monolith is mostly faster or equal; the microservice version comes out ahead whe
 other resources (Section~\ref{sec:related}). What the comparisons rarely show is how large the gap is and where it comes from. Of the twelve we
 review in Section~\ref{sec:related}, only two report a tail percentile, and most drive load with closed loops,
 which slow down with the system they measure and so hide the tail~\cite{Schroeder2006,Tene2015}. None splits
-end-to-end latency into the layers where distribution adds cost. Only one holds the resources of both styles equal throughout, and two more only in their local runs, although a microservice deployment of the same code runs more processes, each with its own runtime,
+end-to-end latency into the layers where distribution adds cost. Only one holds the resources of both styles equal throughout, and two more only in their local runs. This
+matters because a microservice deployment of the same code runs more processes, each with its own runtime,
 connection pools and share of the CPU. Reviews of the migration literature accordingly describe its results as
 conflicting~\cite{Rodrigues2024} and note a lack of comparative studies~\cite{RodriguesJSS2025}.
 
@@ -54,8 +55,9 @@ and checked for identical responses on every deployment;
 \item a per-layer latency accounting that aggregates caller- and callee-side timings in-band, in one
 \texttt{Server-Timing} header per hop, together with cgroup-level CPU and throttling data and an operational
 bottleneck bound that explain the capacity limits;
-\item measurements from \xo{cells} fresh deployments on a local cluster and \xo{eks/cells} on Amazon EKS, under an
-equal, a demand-proportional and an autoscaled allocation, analysed with the repetition as the unit of
+\item measurements from \the\numexpr\xo{cells}+\xo{prop/cells}+\xo{work/cells}+\xo{workprop/cells}\relax{} fresh
+deployments on a local cluster and \the\numexpr\xo{eks/cells}+\xo{hpa/cells}\relax{} on Amazon EKS, under an
+equal, a demand-proportional and an autoscaled allocation and at two levels of service demand, analysed with the repetition as the unit of
 replication. They test H1--H3 and put a price on each synchronous hop;
 \item the software defaults that bias such comparisons and how the testbed neutralises them (Section~\ref{sec:discussion}),
 and the testbed, campaign runner, raw data, analysis pipeline and an interactive dashboard, from which every number
@@ -66,4 +68,4 @@ Section~\ref{sec:background} explains the mechanisms by which distribution costs
 analyse them. Section~\ref{sec:related} reviews related empirical work. Sections~\ref{sec:testbed}
 and~\ref{sec:method} describe the testbed and the experimental method. Section~\ref{sec:results} reports the
 results, Section~\ref{sec:discussion} discusses what they mean for practitioners, and
-Section~\ref{sec:threats} discusses threats to validity.
+Section~\ref{sec:threats} discusses threats to validity, and Section~\ref{sec:conclusion} concludes.

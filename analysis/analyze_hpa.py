@@ -117,9 +117,16 @@ def main():
                 sus = r["rate"]
             out["ramp"][cfg][wl] = series
             out["sustained"][cfg][wl] = sus
-            top = [r for r in series if r["sat"] == 0]  # highest level sustained in every repetition, gaps allowed
+            nreps = max(r["reps"] for r in series)
+            top = [r for r in series if r["sat"] == 0 and r["reps"] == nreps]  # sustained in every repetition, gaps allowed
             out.setdefault("top", {}).setdefault(cfg, {})[wl] = {"rate": top[-1]["rate"], "cpu": top[-1]["quota_used_m"] / 1000,
                                                                 "replicas": top[-1]["replicas"]} if top else None
+            best = [r for r in series if r["sat"] < 1]  # sustained in at least one repetition
+            out.setdefault("best", {}).setdefault(cfg, {})[wl] = {
+                "rate": best[-1]["rate"], "reps_reached": best[-1]["reps"],
+                "reps_sustained": round(best[-1]["reps"] * (1 - best[-1]["sat"])),
+                "cpu": best[-1]["quota_used_m"] / 1000} if best else None
+            out.setdefault("maxreq", {}).setdefault(cfg, {})[wl] = max(max(q or 0 for q in r["quota_used_all"]) for r in series) / 1000
 
     # H2 under elasticity: does any decomposed configuration sustain a higher rate than the monolith?
     wins = []
@@ -166,11 +173,16 @@ def main():
             "hpa/reps": max((r["reps"] for c in out["ramp"].values() for s in c.values() for r in s), default=0)}
     for cfg in out["configs"]:
         for wl in WORKLOADS:
-            nums[f"hpa/sustained/{wl}/{cfg}"] = out["sustained"].get(cfg, {}).get(wl) or "--"
+            nums[f"hpa/sustained/{wl}/{cfg}"] = fmt(out["sustained"].get(cfg, {}).get(wl))
             t = out.get("top", {}).get(cfg, {}).get(wl)
             if t:
-                nums.update({f"hpa/top/{wl}/{cfg}": t["rate"], f"hpa/topcpu/{wl}/{cfg}": fmt(t["cpu"], 3),
+                nums.update({f"hpa/top/{wl}/{cfg}": fmt(t["rate"]), f"hpa/topcpu/{wl}/{cfg}": fmt(t["cpu"], 3),
                              f"hpa/topreplicas/{wl}/{cfg}": fmt(t["replicas"])})
+            b = out.get("best", {}).get(cfg, {}).get(wl)
+            if b:
+                nums.update({f"hpa/best/{wl}/{cfg}": fmt(b["rate"]), f"hpa/bestcpu/{wl}/{cfg}": fmt(b["cpu"], 3),
+                             f"hpa/bestreps/{wl}/{cfg}": b["reps_sustained"]})
+            nums[f"hpa/maxreq/{wl}/{cfg}"] = fmt(out.get("maxreq", {}).get(cfg, {}).get(wl), 3)
             series = out["ramp"].get(cfg, {}).get(wl, [])
             for r in series:
                 key = f"{wl}/{cfg}/{r['rate']}"

@@ -62,8 +62,7 @@ after a closed-loop warm-up of about 580{,}000 requests (p99 4.0\,ms at 50 reque
 It affects every configuration, but configurations with more hops wake more threads per request, so it inflates
 their low-load ratios in Table~\ref{tab:h1}. At the lowest rate the H1 ratios were
 \xo{h1/min}--\xo{h1/max}, but at 200 browse requests per second they were \xo{ratio/browse/B/200/est} (B),
-\xo{ratio/browse/C/200/est} (C) and \xo{ratio/browse/D/200/est} (D). The size of the low-load penalty therefore
-depends on the reference rate, while its sign does not. On bare metal it can be controlled by pinning the
+\xo{ratio/browse/C/200/est} (C) and \xo{ratio/browse/D/200/est} (D). The size of the H1 ratios therefore depends on the reference rate, while their sign does not. On bare metal it can be controlled by pinning the
 CPU frequency governor and limiting idle states, which is part of the protocol for the remaining environments.
 
 Low-load tail latency also drifted between campaigns. The monolith, deployed identically, had a browse p99 at
@@ -92,7 +91,8 @@ Istio Ambient are reported to cost far less~\cite{BremlerBarr2025} and were not 
 arm64 processors, one instance family and one cloud provider. x86 servers, bare metal and other providers,
 which the same scripts also target, remain untested.
 
-\paragraph{Conclusion validity.} With \xo{reps} repetitions per configuration, intervals are wide for effects
+\paragraph{Conclusion validity.} With five repetitions per configuration (three in the service-demand and autoscaling treatments), intervals are
+wide for effects
 that are small relative to the variation between deployments. We report intervals rather than binary
 significance wherever possible, correct the H1 family for multiple comparisons, and treat the repetition, not
 the request, as the unit of analysis. The raw results of every cell are published so that other analyses can be

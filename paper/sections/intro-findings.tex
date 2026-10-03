@@ -4,7 +4,8 @@ budget no decomposed configuration overtook the monolith at any load (H2 falsifi
 quota of its edge service, whose throttling made tail latency erratic before its average utilisation reached the
 limit, while most of the budget stayed unused. Allocating the budget by demand and giving every operation more work
 narrowed the gap but did not close it.
-Autoscaling under a shared CPU ceiling did not change this: the monolith sustained several times the load of the
-decomposed configurations on half the CPU they requested at the ceiling.
+Autoscaling under a shared CPU ceiling did not change this. The monolith sustained up to
+\xo{hpa/sustained/browse/A} browse requests per second on one replica and \xo{hpa/topcpu/browse/A} cores, a load
+the decomposed configurations reached, if at all, only near the ceiling.
 The Istio mesh added a fixed cost per call, \xo{H3/share_deep}\% (local) and \xo{eks/H3/share_deep}\% (cloud) of
 latency on a six-hop path, and used more CPU than the application (H3 supported).

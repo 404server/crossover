@@ -14,14 +14,14 @@ of \xo{hot/browse/C/500/util}--\xo{hot/browse/B/2200/util}\%. Allocating the bud
 raised the decomposed configurations' capacity relative to the monolith by a factor of
 \xo{alloc/gainmin}--\xo{alloc/gainmax}.
 
-The rest is the work that distribution adds to every request, \xo{perhop/browse/cpu/min}--\xo{perhop/browse/cpu/max}\,ms
+The rest is the work that distribution adds to every request, \xo{perhop/cpu/nomesh/min}--\xo{perhop/cpu/nomesh/max}\,ms
 of CPU per remote call without a mesh. No division of a fixed budget recovers it, because even a perfect allocation
 is bounded by the ratio of the CPU each request needs. How much that matters depends on how much work a request
 carries. With microsecond business logic the added work exceeded the logic itself. With 1\,ms in every module
 operation it became a fraction of it, and the proportional allocation brought B to \xo{workprop/peakpct/max}\% of
-the monolith's capacity. The cloud environment shows the same structure with different weights. Its monolith was
-faster at low load, so the same few tenths of a millisecond per call weighed more in the latency ratio, while its
-database, reached across the network, saturated earlier and left a smaller capacity gap.
+the monolith's capacity. The cloud environment shows the same structure with different weights. Its monolith was faster at low load, so the same few tenths of a millisecond per call weighed more in the
+latency ratio, while the monolith, whose database calls all crossed the network, reached a lower peak, which left a
+smaller capacity gap.
 
 None of this means that decomposition cannot win on performance. It means that its case depends on resources the
 monolith cannot use, such as a larger budget or one that follows the load. Berry et al.\ found the outcome to depend
@@ -29,8 +29,7 @@ on the scaling strategy~\cite{Berry2024}, and Blinowski et al.\ found that scali
 instances degraded performance~\cite{Blinowski2022}.
 Autoscaling under a shared ceiling did not supply that case either. The decomposed configurations' autoscalers
 added replicas to the services that needed them, as the argument predicts, but each replica brought its own cold
-JVM and its share of the per-call cost, and the monolith served more load on one replica than they served at the
-ceiling.
+JVM and its share of the per-call cost, and the monolith sustained on one replica loads that they reached, if at all, only near the ceiling.
 
 \subsection{Implications for practitioners}
 
@@ -39,21 +38,20 @@ serialisation, and a few tenths of a millisecond of CPU. A sidecar mesh doubled 
 in the cloud. The price can be measured cheaply, with a \texttt{Server-Timing} header and a load generator that
 records it, and it should be set against the work a call carries before deciding how finely to cut.
 
-\paragraph{Size the edge service, not the service count.} The capacity of every decomposed configuration was its
-edge service's CPU share. That service's throttled-period counter warns earlier than its utilisation, and sizing
+\paragraph{Size the edge service, not the service count.} Under the equal split the capacity of every decomposed configuration was its edge service's CPU share. That service's throttled-period counter warns earlier than its utilisation, and sizing
 services to their measured demand raised capacity relative to the monolith \xo{alloc/gainmin}--\xo{alloc/gainmax}
 times without adding CPU.
 
 \paragraph{Prefer coarse splits, and count the mesh's CPU.} When organisational reasons drive a split, the coarsest
-split that serves them costs least. B kept more capacity than C under every allocation and in both environments, up
-to three times as much, which puts numbers on the advice against services that are too small~\cite{Taibi2018}. On a
+split that serves them costs least. B kept more capacity than C under every static allocation and in both environments, up to three times as
+much, which puts numbers on the advice against services that are too small~\cite{Taibi2018}. On a
 sidecar mesh the proxies used more CPU than the application. Sidecar-less data planes are reported to cost much
 less~\cite{BremlerBarr2025} and should be measured in the same way.
 
 \subsection{Lessons for testbed builders}
 
 Building the protocol changed it. The original latency decomposition subtracted span timestamps taken on different
-hosts and therefore depended on clock synchronisation; the in-band accounting does not. The original planned to fit
+hosts and therefore depended on clock synchronisation; the in-band accounting does not. The original protocol planned to fit
 the USL to open-loop data, a model of a closed system applied to an open one. Its mesh configuration also added
 asynchronous messaging, which would have changed two variables at once. Beyond the protocol, several defaults of
 the software stack bias a comparison of this kind, and others building such testbeds will meet them:
@@ -76,25 +74,3 @@ The campaign runner also targets bare-metal clusters. Runs on x86 bare metal wou
 cloud-network effects from those of the architectures. The autoscaling treatment can be extended with warmed
 replicas, other utilisation targets and a database tier that scales as well. Further variants are gRPC instead
 of JSON over HTTP/1.1, a sidecar-less mesh, and a workload that mixes operations.
-
-\section{Conclusion}
-\label{sec:conclusion}
-
-We compared a monolith with three decompositions of identical code, on a local cluster and on Amazon EKS, under an
-equal CPU budget and a demand-proportional allocation and at two levels of service demand.
-We also added autoscalers under a shared CPU ceiling in the cloud.
-Decomposition added latency at low load: the p99 of the decomposed configurations was \xo{h1/min}--\xo{h1/max}
-times the monolith's locally and \xo{eks/h1/min}--\xo{eks/h1/max} times in the cloud, mostly inter-service transit.
-It cut capacity to \xo{peakpct/min}--\xo{peakpct/max}\% (local) and \xo{eks/peakpct/min}--\xo{eks/peakpct/max}\%
-(cloud) of the monolith's, because the edge service exhausted its CPU share while the rest of the budget stayed
-idle. Allocating the budget by demand raised this to at most \xo{prop/peakpct/max}\%, and with 1\,ms of CPU in every
-module operation to at most \xo{workprop/peakpct/max}\%. A sidecar mesh added
-\xo{mesh/perhop/min}--\xo{eks/mesh/perhop/max}\,ms per call and more CPU than the application. With autoscalers the
-monolith sustained \xo{hpa/sustained/browse/A} browse requests per second on one replica, the decomposed
-configurations at most \xo{hpa/sustained/browse/B} at the ceiling. No decomposed configuration overtook the monolith
-in any setting.
-
-For a team deciding how finely to split, these measurements put a price on each synchronous call and show where it
-is paid. They do not show a load at which decomposition pays for itself in performance; its case rests on the other
-benefits it brings, and the price is smallest when services are coarse and do substantial work. The testbed, data
-and analysis are published so that the same measurements can be repeated on other infrastructure.

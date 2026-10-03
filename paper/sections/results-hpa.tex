@@ -29,7 +29,8 @@
 \caption{Autoscaling treatment in the cloud environment. Top: p99 latency in the recorded last \xo{hpa/window}\,s
 of each \xo{hpa/step}\,s level (median across \xo{hpa/reps} repetitions, bars spanning the repetitions); a line
 ends where a level was no longer sustained (more than 5\% errors, throughput below 90\% of the rate, or p99 above
-\xo{hpa/slo}\,ms). Bottom: CPU requested by all pods of the configuration at the end of each level; the
+\xo{hpa/slo}\,ms) in some repetition. Isolated marks are levels sustained again after one that was not; B's mark at
+\xo{hpa/best/browse/B} browse requests per second comes from the one repetition that reached it. Bottom: CPU requested by all pods of the configuration at the end of each level; the
 dashed line is the shared quota of \xo{hpa/cap} cores.}
 \label{fig:hpa}
 \end{figure}
@@ -38,16 +39,17 @@ Figure~\ref{fig:hpa} shows the autoscaling treatment, \xo{hpa/cells} fresh deplo
 sustained every level up to \xo{hpa/sustained/browse/A} browse and \xo{hpa/sustained/checkout/A} checkout requests
 per second, and it did so with a single replica. At those rates its application container stayed below the
 autoscaler's 70\% target, so it requested only its starting \xo{hpa/topcpu/browse/A} cores, 3.5 for the application
-and 4 for the database. The decomposed configurations sustained every level only up to
-\xo{hpa/sustained/browse/B} (B) and \xo{hpa/sustained/browse/C} (C) browse requests per second and
-\xo{hpa/sustained/checkout/B} and \xo{hpa/sustained/checkout/C} checkout requests per second. Their autoscalers did
-act: beyond these rates they added replicas until the configurations requested the whole ceiling of
-\xo{hpa/cap} cores. The new replicas joined cold while the load kept rising, however, and p99 broke the
-\xo{hpa/slo}\,ms target in at least one repetition. B reached the monolith's highest sustained browse level,
-\xo{hpa/top/browse/B} requests per second, in every repetition only at the ceiling, with \xo{hpa/topcpu/browse/B}
-cores requested against the monolith's \xo{hpa/topcpu/browse/A}. At the first level every configuration scaled up
-briefly, because the metrics pipeline still reported the CPU of the warm-up that had just ended; the next level
-undid it, and the 30\,s idle period before the ramp was evidently too short to prevent it.
+and 4 for the database. The decomposed configurations sustained every level only up to \xo{hpa/sustained/browse/B}
+browse requests per second (B and~C) and \xo{hpa/sustained/checkout/B} (B) and \xo{hpa/sustained/checkout/C} (C)
+checkout requests per second. In every repetition B passed some higher levels as well, up to \xo{hpa/top/browse/B}
+browse and \xo{hpa/top/checkout/B} checkout requests per second, still on its starting \xo{hpa/topcpu/browse/B}
+cores. Beyond these rates the autoscalers did act and added replicas, up to \xo{hpa/maxreq/browse/B} of the
+\xo{hpa/cap} cores (C on checkout: \xo{hpa/maxreq/checkout/C} before its ramp ended). The new replicas joined cold
+while the load kept rising, however, and p99 broke the \xo{hpa/slo}\,ms target in at least one repetition. Only one
+of B's three repetitions sustained the monolith's \xo{hpa/best/browse/B} browse requests per second, with
+\xo{hpa/bestcpu/browse/B} cores requested against the monolith's \xo{hpa/topcpu/browse/A}. At the first level most
+configurations scaled up briefly, because the metrics pipeline still reported the CPU of the warm-up that had just
+ended; the next level undid it, and the 30\,s idle period before the ramp was evidently too short to prevent it.
 
 \textbf{H2 is therefore falsified under autoscaling as well.} One detail of the rule in
 Section~\ref{sec:hypotheses} needed a margin. At low rates, where no autoscaler had acted, B and~C requested a few

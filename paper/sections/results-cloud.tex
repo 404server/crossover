@@ -26,17 +26,18 @@ configuration, the monolith's database and the edge service of each decomposed o
 
 The magnitudes differ, in two directions. The latency penalty at low load is larger in the cloud. The monolith
 was faster there, with a browse p99 of \xo{eks/p99/browse/A/50}\,ms at 50 requests per second against
-\xo{p99/browse/A/50}\,ms locally, because the Graviton nodes do not show the local host's wake-up penalty. Every
-remote call, by contrast, now crossed a real network, and the p99 ratios at the lowest rate were
-\xo{eks/h1/min}--\xo{eks/h1/max}. Transit per hop, \xo{eks/perhop/browse/net/min}--\xo{eks/perhop/browse/net/max}\,ms
-on browse, was close to the local value. A sidecar pair cost about twice as much as locally,
+\xo{p99/browse/A/50}\,ms locally, because the Graviton nodes do not show the local host's wake-up penalty. Transit per hop was, if anything, lower than locally
+(\xo{eks/perhop/browse/net/min}--\xo{eks/perhop/browse/net/max} against
+\xo{perhop/browse/net/min}--\xo{perhop/browse/net/max}\,ms on browse), so the larger p99 ratios at the lowest rate,
+\xo{eks/h1/min}--\xo{eks/h1/max}, reflect the faster monolith. A sidecar pair cost about twice as much as locally,
 \xo{eks/H3/per_hop_shallow_ms}--\xo{eks/H3/per_hop_deep_ms}\,ms per hop, and the mesh accounted for
 \xo{eks/H3/share_deep}\% of end-to-end latency on the six-hop path.
 
 The capacity gap, in turn, is smaller. The scheduler placed the monolith's database on a different node from its
-application in every repetition, so every query crossed the network, and the database saturated at
-\xo{eks/peak/browse/A} browse and \xo{eks/peak/checkout/A} checkout requests per second. The decomposed
-configurations reached \xo{eks/peakpct/min}--\xo{eks/peakpct/max}\% of these peaks, against
+application in every repetition, so every query crossed the network. On browse the database saturated, at \xo{eks/peak/browse/A}
+requests per second. On checkout the monolith peaked at \xo{eks/peak/checkout/A} requests per second with its
+database at \xo{eks/chot/checkout/A/64/util}\% of its quota and unthrottled, so there the CPU counters do not
+identify its limit. The decomposed configurations reached \xo{eks/peakpct/min}--\xo{eks/peakpct/max}\% of the monolith's peaks, against
 \xo{peakpct/min}--\xo{peakpct/max}\% locally. The generator's dispatch lag stayed below
 \xo{eks/lagmax/checkout}\,ms at the 99th percentile, so the cloud's low-rate measurements are also free of the
 local generator's burstiness.

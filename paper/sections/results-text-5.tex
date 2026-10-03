@@ -23,5 +23,5 @@ overtakes the monolith (H2), is falsified for an equal CPU budget: the monolith'
 \xo{peakfactor/max} times that of the decomposed configurations, and no crossover appeared at any load. Allocating the budget in proportion to demand raised their capacity relative to the monolith by a factor of
 \xo{alloc/gainmin}--\xo{alloc/gainmax} but did not close the gap. The cloud environment gave the same verdicts,
 heavier business logic narrowed the gap to \xo{workprop/peakpct/min}--\xo{workprop/peakpct/max}\% of the monolith's
-capacity under proportional allocation, and with autoscalers the monolith sustained several times the decomposed
-configurations' load.
+capacity under proportional allocation, and with autoscalers the monolith sustained on one replica loads that the decomposed configurations reached, if
+at all, only near the ceiling.
