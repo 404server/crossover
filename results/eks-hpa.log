@@ -1,0 +1,73 @@
+08:18:03 main EKS campaign finished
+08:18:03 run/hpa.ready missing: skipping the autoscaling treatment
+Error: could not create cluster provider from options: checking AWS STS access – cannot get role ARN for current session: operation error STS: GetCallerIdentity, https response error StatusCode: 0, RequestID: , request send failed, Post "https://sts.ap-southeast-2.amazonaws.com/": dial tcp: lookup sts.ap-southeast-2.amazonaws.com: no such host
+08:18:03 cluster deleted
+13:38:27 main EKS campaign finished
+2026-10-02 13:38:34 [ℹ]  will use version 1.35 for new nodegroup(s) based on control plane version
+2026-10-02 13:38:46 [ℹ]  nodegroup "sut-hpa" will use "" [AmazonLinux2023/1.35]
+2026-10-02 13:38:54 [ℹ]  3 existing nodegroup(s) (loadgen,sut-4,sut-8) will be excluded
+2026-10-02 13:38:54 [ℹ]  1 nodegroup (sut-hpa) was included (based on the include/exclude rules)
+2026-10-02 13:38:54 [ℹ]  will create a CloudFormation stack for each of 1 managed nodegroups in cluster "crossover"
+2026-10-02 13:38:55 [ℹ]  
+2 sequential tasks: { fix cluster compatibility, 1 task: { 1 task: { create managed nodegroup "sut-hpa" } } 
+}
+2026-10-02 13:38:55 [ℹ]  checking cluster stack for missing resources
+2026-10-02 13:38:58 [ℹ]  cluster stack has all required resources
+2026-10-02 13:39:02 [ℹ]  building managed nodegroup stack "eksctl-crossover-nodegroup-sut-hpa"
+2026-10-02 13:39:04 [ℹ]  1 error(s) occurred and nodegroups haven't been created properly, you may wish to check CloudFormation console
+2026-10-02 13:39:04 [ℹ]  to cleanup resources, run 'eksctl delete nodegroup --region=ap-southeast-2 --cluster=crossover --name=<name>' for each of the failed nodegroup
+2026-10-02 13:39:04 [✖]  creating CloudFormation stack "eksctl-crossover-nodegroup-sut-hpa": operation error CloudFormation: CreateStack, https response error StatusCode: 403, RequestID: 31c7a6f3-456a-4d2e-a39f-7d4a4bbc339a, api error AccessDenied: User: arn:aws:iam::<account>:user/crossover is not authorized to perform: cloudformation:CreateStack on resource: arn:aws:cloudformation:ap-southeast-2:<account>:stack/eksctl-crossover-nodegroup-sut-hpa/* with an explicit deny in a service control policy: arn:aws:organizations::<org>:policy/o-zardv36uc1/service_control_policy/p-rsde1uva
+Error: failed to create nodegroups for cluster "crossover"
+2026-10-02 13:40:08 [ℹ]  will use version 1.35 for new nodegroup(s) based on control plane version
+2026-10-02 13:40:20 [ℹ]  nodegroup "sut-hpa" will use "" [AmazonLinux2023/1.35]
+2026-10-02 13:40:28 [ℹ]  3 existing nodegroup(s) (loadgen,sut-4,sut-8) will be excluded
+2026-10-02 13:40:28 [ℹ]  1 nodegroup (sut-hpa) was included (based on the include/exclude rules)
+2026-10-02 13:40:28 [ℹ]  will create a CloudFormation stack for each of 1 managed nodegroups in cluster "crossover"
+2026-10-02 13:40:29 [ℹ]  
+2 sequential tasks: { fix cluster compatibility, 1 task: { 1 task: { create managed nodegroup "sut-hpa" } } 
+}
+2026-10-02 13:40:29 [ℹ]  checking cluster stack for missing resources
+2026-10-02 13:40:32 [ℹ]  cluster stack has all required resources
+2026-10-02 13:40:35 [ℹ]  building managed nodegroup stack "eksctl-crossover-nodegroup-sut-hpa"
+2026-10-02 13:40:36 [ℹ]  1 error(s) occurred and nodegroups haven't been created properly, you may wish to check CloudFormation console
+2026-10-02 13:40:36 [ℹ]  to cleanup resources, run 'eksctl delete nodegroup --region=ap-southeast-2 --cluster=crossover --name=<name>' for each of the failed nodegroup
+2026-10-02 13:40:36 [✖]  creating CloudFormation stack "eksctl-crossover-nodegroup-sut-hpa": operation error CloudFormation: CreateStack, https response error StatusCode: 403, RequestID: 6760239d-55fd-4d77-a9b1-cafdda76ec2e, api error AccessDenied: User: arn:aws:iam::<account>:user/crossover is not authorized to perform: cloudformation:CreateStack on resource: arn:aws:cloudformation:ap-southeast-2:<account>:stack/eksctl-crossover-nodegroup-sut-hpa/* with an explicit deny in a service control policy: arn:aws:organizations::<org>:policy/o-zardv36uc1/service_control_policy/p-rsde1uva
+Error: failed to create nodegroups for cluster "crossover"
+16:40:10 main EKS campaign finished
+16:40:10 run/hpa.ready missing: skipping the autoscaling treatment
+2026-10-02 16:40:24 [ℹ]  deleting EKS cluster "crossover"
+2026-10-02 16:40:30 [ℹ]  will drain 0 unmanaged nodegroup(s) in cluster "crossover"
+2026-10-02 16:40:30 [ℹ]  starting parallel draining, max in-flight of 1
+2026-10-02 16:40:32 [ℹ]  deleted 0 Fargate profile(s)
+2026-10-02 16:40:39 [!]  failed to create Kubernetes client for Gateway API cleanup, will skip Gateway resources: Get "https://230AA4CD1BA92B07ADB488DF6EEE246A.gr7.ap-southeast-2.eks.amazonaws.com/api": dial tcp: lookup 230AA4CD1BA92B07ADB488DF6EEE246A.gr7.ap-southeast-2.eks.amazonaws.com: no such host
+2026-10-02 16:40:39 [ℹ]  cleaning up AWS load balancers created by Kubernetes objects of Kind Service, Ingress, or Gateway
+Error: cannot list Kubernetes Services: Get "https://230AA4CD1BA92B07ADB488DF6EEE246A.gr7.ap-southeast-2.eks.amazonaws.com/api/v1/services": dial tcp: lookup 230AA4CD1BA92B07ADB488DF6EEE246A.gr7.ap-southeast-2.eks.amazonaws.com: no such host
+2026-10-02 16:41:45 [ℹ]  deleting EKS cluster "crossover"
+2026-10-02 16:41:50 [ℹ]  will drain 0 unmanaged nodegroup(s) in cluster "crossover"
+2026-10-02 16:41:50 [ℹ]  starting parallel draining, max in-flight of 1
+2026-10-02 16:41:54 [ℹ]  deleted 0 Fargate profile(s)
+2026-10-02 16:42:00 [ℹ]  cleaning up AWS load balancers created by Kubernetes objects of Kind Service, Ingress, or Gateway
+2026-10-02 16:42:21 [ℹ]  
+2 sequential tasks: { 
+    3 parallel sub-tasks: { 
+        delete nodegroup "loadgen",
+        delete nodegroup "sut-4",
+        delete nodegroup "sut-8",
+    }, delete cluster control plane "crossover" 
+}
+2026-10-02 16:42:22 [ℹ]  will delete stack "eksctl-crossover-nodegroup-loadgen"
+2026-10-02 16:42:22 [ℹ]  waiting for stack "eksctl-crossover-nodegroup-loadgen" to get deleted
+2026-10-02 16:42:22 [ℹ]  will delete stack "eksctl-crossover-nodegroup-sut-4"
+2026-10-02 16:42:22 [ℹ]  waiting for stack "eksctl-crossover-nodegroup-sut-4" to get deleted
+2026-10-02 16:42:23 [ℹ]  will delete stack "eksctl-crossover-nodegroup-sut-8"
+2026-10-02 16:42:23 [ℹ]  waiting for stack "eksctl-crossover-nodegroup-sut-8" to get deleted
+2026-10-02 16:42:23 [ℹ]  waiting for CloudFormation stack "eksctl-crossover-nodegroup-loadgen"
+2026-10-02 16:42:23 [ℹ]  waiting for CloudFormation stack "eksctl-crossover-nodegroup-sut-4"
+2026-10-02 16:42:23 [ℹ]  waiting for CloudFormation stack "eksctl-crossover-nodegroup-sut-8"
+2026-10-02 16:42:53 [ℹ]  waiting for CloudFormation stack "eksctl-crossover-nodegroup-loadgen"
+2026-10-02 16:42:54 [ℹ]  waiting for CloudFormation stack "eksctl-crossover-nodegroup-sut-4"
+2026-10-02 16:42:54 [ℹ]  waiting for CloudFormation stack "eksctl-crossover-nodegroup-sut-8"
+2026-10-02 16:43:30 [ℹ]  waiting for CloudFormation stack "eksctl-crossover-nodegroup-sut-8"
+2026-10-02 16:43:44 [ℹ]  waiting for CloudFormation stack "eksctl-crossover-nodegroup-sut-4"
+2026-10-02 16:43:53 [ℹ]  waiting for CloudFormation stack "eksctl-crossover-nodegroup-loadgen"
+2026-10-02 16:44:30 [ℹ]  waiting for CloudFormation stack "eksctl-crossover-nodegroup-sut-8"

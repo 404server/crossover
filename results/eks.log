@@ -1,0 +1,163 @@
+12:43:02 rep 0 config C: deploying
+12:45:57   browse: warm-up 60s, closed loop N=16
+12:48:20   browse open     50/s  ok=1.000  p99=     6.8 ms
+12:49:40   browse open    100/s  ok=1.000  p99=    30.7 ms
+12:51:15   browse open    200/s  ok=1.000  p99=    18.8 ms
+12:52:40   browse open    300/s  ok=1.000  p99=    73.9 ms
+12:54:03   browse open    400/s  ok=1.000  p99=  1512.6 ms
+12:55:26   browse open    500/s  ok=1.000  p99=   627.3 ms
+12:56:44   browse open    600/s  ok=0.994  p99=  6570.8 ms
+12:58:21   browse open    800/s  ok=0.608  p99= 10001.1 ms
+13:02:03   !! rep0/C failed (RuntimeError: could not copy /work/r.gz out of the load generator (265216 of 287134 bytes)); retrying once the API is back
+13:02:09 rep 0 config C: deploying
+13:05:14   browse: warm-up 60s, closed loop N=16
+13:08:27   browse open     50/s  ok=1.000  p99=     4.4 ms
+13:09:34   browse open    100/s  ok=1.000  p99=    14.3 ms
+13:10:47   browse open    200/s  ok=1.000  p99=    39.0 ms
+13:12:07   browse open    300/s  ok=1.000  p99=    33.8 ms
+13:13:15   browse open    400/s  ok=1.000  p99=    60.4 ms
+13:14:32   browse open    500/s  ok=0.993  p99=  3742.0 ms
+13:16:04   browse open    600/s  ok=0.994  p99=  4920.7 ms
+13:17:11   browse closed N=   1  X=   443.2/s  ok=1.000
+13:18:14   browse closed N=   2  X=   535.4/s  ok=1.000
+13:19:25   browse closed N=   4  X=   530.7/s  ok=1.000
+13:20:34   browse closed N=   8  X=   514.1/s  ok=1.000
+13:21:39   browse closed N=  16  X=   494.9/s  ok=1.000
+13:22:42   browse closed N=  32  X=   494.0/s  ok=1.000
+13:23:53   browse closed N=  64  X=   484.4/s  ok=1.000
+13:25:05   browse closed N= 128  X=   499.6/s  ok=1.000
+13:26:25   browse closed N= 256  X=   496.8/s  ok=1.000
+13:27:05   checkout: warm-up 60s, closed loop N=16
+13:29:35   checkout open     25/s  ok=1.000  p99=    11.0 ms
+13:33:18   !! rep0/C failed (RuntimeError: could not copy /work/r.gz out of the load generator (3072 of 50860 bytes)); retrying once the API is back
+13:33:24 rep 0 config C: deploying
+13:38:04   !! rep0/C failed (RuntimeError: could not copy /work/r.gz out of the load generator (15360 of 39575 bytes)); retrying once the API is back
+rep0/C failed three times
+13:51:28 rep 0 config C: deploying
+13:53:38   browse: warm-up 60s, closed loop N=16
+13:55:57   browse open     50/s  ok=1.000  p99=     3.7 ms
+13:57:11   browse open    100/s  ok=1.000  p99=    32.8 ms
+13:58:26   browse open    200/s  ok=1.000  p99=    12.6 ms
+13:59:55   browse open    300/s  ok=1.000  p99=    28.0 ms
+14:01:10   browse open    400/s  ok=1.000  p99=  1327.8 ms
+14:02:24   browse open    500/s  ok=1.000  p99=   177.4 ms
+14:03:51   browse open    600/s  ok=0.994  p99=  4834.0 ms
+14:05:35   browse open    800/s  ok=0.714  p99= 10001.1 ms
+14:06:51   browse closed N=   1  X=   467.6/s  ok=1.000
+14:08:01   browse closed N=   2  X=   579.8/s  ok=1.000
+14:09:08   browse closed N=   4  X=   554.3/s  ok=1.000
+14:10:13   browse closed N=   8  X=   519.9/s  ok=1.000
+14:11:28   browse closed N=  16  X=   516.0/s  ok=1.000
+14:12:34   browse closed N=  32  X=   515.1/s  ok=1.000
+14:13:52   browse closed N=  64  X=   511.6/s  ok=1.000
+14:14:57   browse closed N= 128  X=   512.9/s  ok=1.000
+14:16:03   browse closed N= 256  X=   508.5/s  ok=1.000
+14:16:50   checkout: warm-up 60s, closed loop N=16
+14:19:07   checkout open     25/s  ok=1.000  p99=    11.4 ms
+14:20:21   checkout open     50/s  ok=1.000  p99=    57.9 ms
+14:21:38   checkout open    100/s  ok=1.000  p99=    21.4 ms
+14:22:51   checkout open    150/s  ok=1.000  p99=    32.8 ms
+14:24:05   checkout open    200/s  ok=1.000  p99=    36.6 ms
+14:25:28   checkout open    300/s  ok=1.000  p99=  1245.3 ms
+14:27:00   checkout open    400/s  ok=1.000  p99=  2736.4 ms
+14:28:39   checkout open    500/s  ok=0.856  p99= 10001.1 ms
+14:29:49   checkout closed N=   1  X=   155.2/s  ok=1.000
+14:30:54   checkout closed N=   2  X=   301.7/s  ok=1.000
+14:31:59   checkout closed N=   4  X=   368.4/s  ok=1.000
+14:33:03   checkout closed N=   8  X=   344.0/s  ok=1.000
+14:34:13   checkout closed N=  16  X=   345.3/s  ok=1.000
+14:35:19   checkout closed N=  32  X=   352.7/s  ok=1.000
+14:36:23   checkout closed N=  64  X=   357.6/s  ok=1.000
+14:37:29   checkout closed N= 128  X=   366.3/s  ok=1.000
+14:38:34   checkout closed N= 256  X=   360.0/s  ok=1.000
+14:38:39 rep 0 config D: deploying
+14:40:58   browse: warm-up 60s, closed loop N=16
+14:43:19   browse open     50/s  ok=1.000  p99=     7.7 ms
+14:44:37   browse open    100/s  ok=1.000  p99=    17.8 ms
+14:45:55   browse open    200/s  ok=1.000  p99=    42.0 ms
+14:47:10   browse open    300/s  ok=1.000  p99=    50.9 ms
+14:48:30   browse open    400/s  ok=1.000  p99=   254.0 ms
+14:49:49   browse open    500/s  ok=1.000  p99=   745.6 ms
+14:51:20   browse open    600/s  ok=0.958  p99=  3030.2 ms
+14:53:09   browse open    800/s  ok=0.329  p99= 10001.1 ms
+14:54:26   browse closed N=   1  X=   208.2/s  ok=1.000
+14:55:35   browse closed N=   2  X=   326.0/s  ok=0.958
+14:56:41   browse closed N=   4  X=   490.2/s  ok=1.000
+14:57:49   browse closed N=   8  X=   508.7/s  ok=1.000
+14:59:11   browse closed N=  16  X=   500.4/s  ok=1.000
+15:00:51   browse closed N=  32  X=   510.8/s  ok=1.000
+15:02:00   browse closed N=  64  X=   522.9/s  ok=1.000
+15:03:13   browse closed N= 128  X=   529.2/s  ok=1.000
+15:04:20   browse closed N= 256  X=   489.3/s  ok=1.000
+15:05:06   checkout: warm-up 60s, closed loop N=16
+15:07:25   checkout open     25/s  ok=1.000  p99=    16.2 ms
+15:08:45   checkout open     50/s  ok=1.000  p99=    52.0 ms
+15:09:59   checkout open    100/s  ok=1.000  p99=    15.7 ms
+15:11:16   checkout open    150/s  ok=1.000  p99=    49.8 ms
+15:12:35   checkout open    200/s  ok=1.000  p99=    46.9 ms
+15:13:55   checkout open    300/s  ok=1.000  p99=  1072.6 ms
+15:15:17   checkout open    400/s  ok=1.000  p99=   750.6 ms
+15:16:46   checkout open    500/s  ok=0.860  p99=  4809.7 ms
+15:18:33   checkout open    700/s  ok=0.200  p99= 10001.0 ms
+15:19:43   checkout closed N=   1  X=    82.2/s  ok=1.000
+15:20:48   checkout closed N=   2  X=   157.9/s  ok=1.000
+15:21:54   checkout closed N=   4  X=   298.3/s  ok=1.000
+15:23:02   checkout closed N=   8  X=   318.0/s  ok=1.000
+15:24:08   checkout closed N=  16  X=   322.7/s  ok=1.000
+15:25:16   checkout closed N=  32  X=   334.4/s  ok=1.000
+15:26:25   checkout closed N=  64  X=   357.4/s  ok=1.000
+15:27:32   checkout closed N= 128  X=   373.2/s  ok=1.000
+15:28:40   checkout closed N= 256  X=   372.6/s  ok=1.000
+15:28:45 rep 0 config B: deploying
+15:30:28   browse: warm-up 60s, closed loop N=16
+15:32:44   browse open     50/s  ok=1.000  p99=     2.6 ms
+15:33:57   browse open    100/s  ok=1.000  p99=     2.6 ms
+15:35:09   browse open    200/s  ok=1.000  p99=     2.5 ms
+15:36:21   browse open    300/s  ok=1.000  p99=     2.4 ms
+15:37:36   browse open    400/s  ok=1.000  p99=     2.6 ms
+15:38:49   browse open    500/s  ok=1.000  p99=     2.8 ms
+15:40:04   browse open    600/s  ok=1.000  p99=     2.7 ms
+15:41:27   browse open    800/s  ok=1.000  p99=     3.1 ms
+15:42:57   browse open   1000/s  ok=1.000  p99=    11.4 ms
+15:44:27   browse open   1400/s  ok=0.998  p99=  1383.0 ms
+15:46:22   browse open   1800/s  ok=0.998  p99=  9537.2 ms
+15:48:23   browse open   2200/s  ok=0.646  p99= 10074.2 ms
+15:51:16   !! rep0/B failed (RuntimeError: kubectl exec -i -n load deploy/loadgen -- sh -c (tail -c +1 /work/r.gz); rc=$?; sleep 2; exit $rc
+Unable to connect to the server: net/http: TLS handshake timeout
+); retrying once the API is back
+15:51:47 rep 0 config B: deploying
+15:53:59   browse: warm-up 60s, closed loop N=16
+15:56:18   browse open     50/s  ok=1.000  p99=     2.9 ms
+15:57:53   browse open    100/s  ok=1.000  p99=     2.5 ms
+15:59:08   browse open    200/s  ok=1.000  p99=     2.4 ms
+16:00:30   browse open    300/s  ok=1.000  p99=     2.8 ms
+16:01:45   browse open    400/s  ok=1.000  p99=     3.3 ms
+16:03:00   browse open    500/s  ok=1.000  p99=     3.1 ms
+16:04:15   browse open    600/s  ok=1.000  p99=     3.3 ms
+16:05:39   browse open    800/s  ok=1.000  p99=     4.3 ms
+16:07:01   browse open   1000/s  ok=1.000  p99=   310.0 ms
+16:08:23   browse open   1400/s  ok=0.998  p99=  2924.1 ms
+16:10:01   browse open   1800/s  ok=0.998  p99=  9812.6 ms
+16:11:10   browse closed N=   1  X=   672.6/s  ok=1.000
+16:12:23   browse closed N=   2  X=  1243.5/s  ok=1.000
+16:13:35   browse closed N=   4  X=  1502.6/s  ok=1.000
+16:14:49   browse closed N=   8  X=  1394.9/s  ok=1.000
+16:15:54   browse closed N=  16  X=  1388.9/s  ok=1.000
+16:17:08   browse closed N=  32  X=  1413.2/s  ok=1.000
+16:18:20   browse closed N=  64  X=  1383.6/s  ok=1.000
+16:19:35   browse closed N= 128  X=  1367.9/s  ok=1.000
+16:20:49   browse closed N= 256  X=  1386.5/s  ok=1.000
+16:21:40   checkout: warm-up 60s, closed loop N=16
+16:25:19   checkout open     25/s  ok=1.000  p99=     8.0 ms
+16:28:32   checkout open     50/s  ok=1.000  p99=     7.1 ms
+16:29:55   checkout open    100/s  ok=1.000  p99=     7.0 ms
+16:31:43   checkout open    150/s  ok=1.000  p99=     6.8 ms
+16:33:28   checkout open    200/s  ok=1.000  p99=     7.2 ms
+16:35:42   !! rep0/B failed (RuntimeError: kubectl exec -i -n load deploy/loadgen -- sh -c (tail -c +1 /work/r.gz); rc=$?; sleep 2; exit $rc
+error: Timeout occurred
+); retrying once the API is back
+16:36:12 rep 0 config B: deploying
+16:36:42   !! rep0/B failed (RuntimeError: kubectl delete ns sut --ignore-not-found --wait=true --timeout=600s
+Unable to connect to the server: dial tcp 52.63.245.212:443: i/o timeout
+); retrying once the API is back
+rep0/B failed three times

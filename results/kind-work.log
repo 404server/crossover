@@ -1,0 +1,716 @@
+14:03:22 rep 0 config C: deploying
+14:03:57   browse: warm-up 60s, closed loop N=16
+14:05:34   browse open     50/s  ok=1.000  p99=     7.8 ms
+14:06:14   browse open    100/s  ok=1.000  p99=     7.2 ms
+14:06:53   browse open    200/s  ok=1.000  p99=     7.0 ms
+14:07:41   browse open    300/s  ok=0.989  p99=  9042.4 ms
+14:08:36   browse open    400/s  ok=0.908  p99= 10001.2 ms
+14:09:06   browse closed N=   1  X=   188.0/s  ok=1.000
+14:09:36   browse closed N=   2  X=   296.5/s  ok=1.000
+14:10:05   browse closed N=   4  X=   295.5/s  ok=1.000
+14:10:35   browse closed N=   8  X=   250.4/s  ok=1.000
+14:11:05   browse closed N=  16  X=   255.1/s  ok=1.000
+14:11:35   browse closed N=  32  X=   269.7/s  ok=1.000
+14:12:04   browse closed N=  64  X=   284.1/s  ok=1.000
+14:12:34   browse closed N= 128  X=   288.4/s  ok=1.000
+14:13:05   browse closed N= 256  X=   290.8/s  ok=1.000
+14:13:23   checkout: warm-up 60s, closed loop N=16
+14:15:00   checkout open     25/s  ok=1.000  p99=    15.7 ms
+14:15:40   checkout open     50/s  ok=1.000  p99=    13.2 ms
+14:16:19   checkout open    100/s  ok=1.000  p99=    13.1 ms
+14:16:59   checkout open    150/s  ok=1.000  p99=    12.6 ms
+14:17:39   checkout open    200/s  ok=1.000  p99=    32.8 ms
+14:18:28   checkout open    300/s  ok=0.989  p99=  9848.1 ms
+14:19:23   checkout open    400/s  ok=0.568  p99= 10001.6 ms
+14:19:53   checkout closed N=   1  X=    98.2/s  ok=1.000
+14:20:22   checkout closed N=   2  X=   202.9/s  ok=1.000
+14:20:52   checkout closed N=   4  X=   246.0/s  ok=1.000
+14:21:22   checkout closed N=   8  X=   206.0/s  ok=1.000
+14:21:52   checkout closed N=  16  X=   204.5/s  ok=1.000
+14:22:21   checkout closed N=  32  X=   218.9/s  ok=1.000
+14:22:51   checkout closed N=  64  X=   229.1/s  ok=1.000
+14:23:21   checkout closed N= 128  X=   236.9/s  ok=1.000
+14:23:52   checkout closed N= 256  X=   244.0/s  ok=1.000
+14:23:57 rep 0 config B: deploying
+14:24:28   browse: warm-up 60s, closed loop N=16
+14:26:04   browse open     50/s  ok=1.000  p99=     6.9 ms
+14:26:44   browse open    100/s  ok=1.000  p99=     6.1 ms
+14:27:23   browse open    200/s  ok=1.000  p99=     5.9 ms
+14:28:03   browse open    300/s  ok=1.000  p99=     5.9 ms
+14:28:43   browse open    400/s  ok=1.000  p99=    32.1 ms
+14:29:32   browse open    500/s  ok=0.861  p99= 10001.4 ms
+14:30:27   browse open    600/s  ok=0.675  p99= 10001.6 ms
+14:30:57   browse closed N=   1  X=   197.3/s  ok=1.000
+14:31:26   browse closed N=   2  X=   393.3/s  ok=1.000
+14:31:56   browse closed N=   4  X=   397.9/s  ok=1.000
+14:32:26   browse closed N=   8  X=   358.3/s  ok=1.000
+14:32:56   browse closed N=  16  X=   370.9/s  ok=1.000
+14:33:25   browse closed N=  32  X=   380.1/s  ok=1.000
+14:33:55   browse closed N=  64  X=   387.0/s  ok=1.000
+14:34:25   browse closed N= 128  X=   386.0/s  ok=1.000
+14:34:55   browse closed N= 256  X=   391.1/s  ok=1.000
+14:35:13   checkout: warm-up 60s, closed loop N=16
+14:36:50   checkout open     25/s  ok=1.000  p99=    12.1 ms
+14:37:29   checkout open     50/s  ok=1.000  p99=    11.1 ms
+14:38:09   checkout open    100/s  ok=1.000  p99=    10.3 ms
+14:38:49   checkout open    150/s  ok=1.000  p99=    10.7 ms
+14:39:28   checkout open    200/s  ok=1.000  p99=    10.3 ms
+14:40:08   checkout open    300/s  ok=1.000  p99=    10.5 ms
+14:40:52   checkout open    400/s  ok=0.992  p99=  5494.3 ms
+14:41:46   checkout open    500/s  ok=0.795  p99= 10001.5 ms
+14:42:16   checkout closed N=   1  X=   113.8/s  ok=1.000
+14:42:46   checkout closed N=   2  X=   222.2/s  ok=1.000
+14:43:15   checkout closed N=   4  X=   356.3/s  ok=1.000
+14:43:45   checkout closed N=   8  X=   318.4/s  ok=1.000
+14:44:14   checkout closed N=  16  X=   321.5/s  ok=1.000
+14:44:44   checkout closed N=  32  X=   331.6/s  ok=1.000
+14:45:14   checkout closed N=  64  X=   346.8/s  ok=1.000
+14:45:44   checkout closed N= 128  X=   353.4/s  ok=1.000
+14:46:14   checkout closed N= 256  X=   349.8/s  ok=1.000
+14:46:19 rep 0 config A: deploying
+14:46:47   browse: warm-up 60s, closed loop N=16
+14:48:24   browse open     50/s  ok=1.000  p99=     5.5 ms
+14:49:04   browse open    100/s  ok=1.000  p99=     5.2 ms
+14:49:43   browse open    200/s  ok=1.000  p99=     5.1 ms
+14:50:23   browse open    300/s  ok=1.000  p99=     5.1 ms
+14:51:02   browse open    400/s  ok=1.000  p99=     4.8 ms
+14:51:42   browse open    500/s  ok=1.000  p99=     4.8 ms
+14:52:22   browse open    600/s  ok=1.000  p99=     4.8 ms
+14:53:01   browse open    800/s  ok=1.000  p99=     5.3 ms
+14:53:43   browse open   1000/s  ok=0.997  p99=  2667.6 ms
+14:54:38   browse open   1400/s  ok=0.724  p99= 10002.1 ms
+14:55:08   browse closed N=   1  X=   222.2/s  ok=1.000
+14:55:37   browse closed N=   2  X=   434.9/s  ok=1.000
+14:56:07   browse closed N=   4  X=   887.9/s  ok=1.000
+14:56:36   browse closed N=   8  X=   941.0/s  ok=1.000
+14:57:06   browse closed N=  16  X=   945.3/s  ok=1.000
+14:57:36   browse closed N=  32  X=   928.3/s  ok=1.000
+14:58:05   browse closed N=  64  X=   932.9/s  ok=1.000
+14:58:35   browse closed N= 128  X=   938.8/s  ok=1.000
+14:59:05   browse closed N= 256  X=   931.7/s  ok=1.000
+14:59:23   checkout: warm-up 60s, closed loop N=16
+15:01:00   checkout open     25/s  ok=1.000  p99=    10.1 ms
+15:01:40   checkout open     50/s  ok=1.000  p99=     9.0 ms
+15:02:19   checkout open    100/s  ok=1.000  p99=    10.1 ms
+15:02:59   checkout open    150/s  ok=1.000  p99=     8.6 ms
+15:03:38   checkout open    200/s  ok=1.000  p99=     8.8 ms
+15:04:18   checkout open    300/s  ok=1.000  p99=     9.0 ms
+15:04:57   checkout open    400/s  ok=1.000  p99=     8.5 ms
+15:05:37   checkout open    500/s  ok=1.000  p99=     8.6 ms
+15:06:25   checkout open    700/s  ok=0.995  p99=  9138.4 ms
+15:07:20   checkout open    900/s  ok=0.617  p99= 10001.3 ms
+15:07:50   checkout closed N=   1  X=   126.7/s  ok=1.000
+15:08:19   checkout closed N=   2  X=   256.3/s  ok=1.000
+15:08:49   checkout closed N=   4  X=   508.2/s  ok=1.000
+15:09:18   checkout closed N=   8  X=   546.1/s  ok=1.000
+15:09:48   checkout closed N=  16  X=   546.0/s  ok=1.000
+15:10:18   checkout closed N=  32  X=   537.2/s  ok=1.000
+15:10:47   checkout closed N=  64  X=   542.8/s  ok=1.000
+15:11:17   checkout closed N= 128  X=   542.7/s  ok=1.000
+15:11:47   checkout closed N= 256  X=   541.5/s  ok=1.000
+15:11:52 rep 1 config C: deploying
+15:12:27   browse: warm-up 60s, closed loop N=16
+15:14:04   browse open     50/s  ok=1.000  p99=     8.9 ms
+15:14:44   browse open    100/s  ok=1.000  p99=     7.1 ms
+15:15:23   browse open    200/s  ok=1.000  p99=    29.4 ms
+15:16:08   browse open    300/s  ok=0.989  p99=  8977.6 ms
+15:17:03   browse open    400/s  ok=0.785  p99= 10001.5 ms
+15:17:33   browse closed N=   1  X=   188.6/s  ok=1.000
+15:18:02   browse closed N=   2  X=   294.0/s  ok=1.000
+15:18:32   browse closed N=   4  X=   288.2/s  ok=1.000
+15:19:02   browse closed N=   8  X=   240.1/s  ok=1.000
+15:19:32   browse closed N=  16  X=   253.3/s  ok=1.000
+15:20:01   browse closed N=  32  X=   261.8/s  ok=1.000
+15:20:31   browse closed N=  64  X=   262.8/s  ok=1.000
+15:21:01   browse closed N= 128  X=   265.0/s  ok=1.000
+15:21:32   browse closed N= 256  X=   287.0/s  ok=1.000
+15:21:52   checkout: warm-up 60s, closed loop N=16
+15:23:29   checkout open     25/s  ok=1.000  p99=    14.9 ms
+15:24:09   checkout open     50/s  ok=1.000  p99=    17.2 ms
+15:24:48   checkout open    100/s  ok=1.000  p99=    13.5 ms
+15:25:28   checkout open    150/s  ok=1.000  p99=    17.8 ms
+15:26:08   checkout open    200/s  ok=1.000  p99=    15.2 ms
+15:26:56   checkout open    300/s  ok=0.989  p99=  9904.1 ms
+15:27:51   checkout open    400/s  ok=0.569  p99= 10001.3 ms
+15:28:11   recovered after 1 probe(s)
+15:28:36   checkout closed N=   1  X=   103.4/s  ok=1.000
+15:29:06   checkout closed N=   2  X=   202.9/s  ok=1.000
+15:29:35   checkout closed N=   4  X=   247.0/s  ok=1.000
+15:30:05   checkout closed N=   8  X=   202.7/s  ok=1.000
+15:30:35   checkout closed N=  16  X=   207.8/s  ok=1.000
+15:31:05   checkout closed N=  32  X=   221.7/s  ok=1.000
+15:31:34   checkout closed N=  64  X=   231.2/s  ok=1.000
+15:32:05   checkout closed N= 128  X=   231.6/s  ok=1.000
+15:32:35   checkout closed N= 256  X=   239.8/s  ok=1.000
+15:32:40 rep 1 config B: deploying
+15:33:10   browse: warm-up 60s, closed loop N=16
+15:34:47   browse open     50/s  ok=1.000  p99=     6.6 ms
+15:35:27   browse open    100/s  ok=1.000  p99=     6.6 ms
+15:36:06   browse open    200/s  ok=1.000  p99=     6.4 ms
+15:36:46   browse open    300/s  ok=1.000  p99=     6.6 ms
+15:37:35   browse open    400/s  ok=0.996  p99=  2918.0 ms
+15:38:29   browse open    500/s  ok=0.993  p99=  9353.2 ms
+15:38:58   browse closed N=   1  X=   199.5/s  ok=1.000
+15:39:28   browse closed N=   2  X=   392.5/s  ok=1.000
+15:39:58   browse closed N=   4  X=   397.3/s  ok=1.000
+15:40:27   browse closed N=   8  X=   357.7/s  ok=1.000
+15:40:57   browse closed N=  16  X=   371.5/s  ok=1.000
+15:41:27   browse closed N=  32  X=   377.8/s  ok=1.000
+15:41:56   browse closed N=  64  X=   386.5/s  ok=1.000
+15:42:26   browse closed N= 128  X=   393.3/s  ok=1.000
+15:42:56   browse closed N= 256  X=   391.1/s  ok=1.000
+15:43:15   checkout: warm-up 60s, closed loop N=16
+15:44:51   checkout open     25/s  ok=1.000  p99=    12.2 ms
+15:45:31   checkout open     50/s  ok=1.000  p99=    10.8 ms
+15:46:11   checkout open    100/s  ok=1.000  p99=    10.6 ms
+15:46:50   checkout open    150/s  ok=1.000  p99=    10.8 ms
+15:47:30   checkout open    200/s  ok=1.000  p99=    10.5 ms
+15:48:09   checkout open    300/s  ok=1.000  p99=    10.8 ms
+15:48:54   checkout open    400/s  ok=0.992  p99=  5116.0 ms
+15:49:48   checkout open    500/s  ok=0.825  p99= 10001.4 ms
+15:50:18   checkout closed N=   1  X=   115.8/s  ok=1.000
+15:50:48   checkout closed N=   2  X=   222.9/s  ok=1.000
+15:51:17   checkout closed N=   4  X=   358.9/s  ok=1.000
+15:51:47   checkout closed N=   8  X=   319.1/s  ok=1.000
+15:52:16   checkout closed N=  16  X=   327.1/s  ok=1.000
+15:52:46   checkout closed N=  32  X=   341.0/s  ok=1.000
+15:53:16   checkout closed N=  64  X=   349.7/s  ok=1.000
+15:53:46   checkout closed N= 128  X=   352.5/s  ok=1.000
+15:54:16   checkout closed N= 256  X=   358.8/s  ok=1.000
+15:54:21 rep 1 config A: deploying
+15:54:49   browse: warm-up 60s, closed loop N=16
+15:56:25   browse open     50/s  ok=1.000  p99=     5.5 ms
+15:57:05   browse open    100/s  ok=1.000  p99=     5.0 ms
+15:57:45   browse open    200/s  ok=1.000  p99=     4.8 ms
+15:58:24   browse open    300/s  ok=1.000  p99=     5.0 ms
+15:59:04   browse open    400/s  ok=1.000  p99=     5.1 ms
+15:59:43   browse open    500/s  ok=1.000  p99=     5.2 ms
+16:00:23   browse open    600/s  ok=1.000  p99=     5.3 ms
+16:01:03   browse open    800/s  ok=1.000  p99=     5.4 ms
+16:01:45   browse open   1000/s  ok=0.997  p99=  2773.6 ms
+16:02:40   browse open   1400/s  ok=0.745  p99= 10001.5 ms
+16:03:09   browse closed N=   1  X=   219.0/s  ok=1.000
+16:03:39   browse closed N=   2  X=   439.9/s  ok=1.000
+16:04:09   browse closed N=   4  X=   891.9/s  ok=1.000
+16:04:39   browse closed N=   8  X=   938.8/s  ok=1.000
+16:05:08   browse closed N=  16  X=   946.2/s  ok=1.000
+16:05:38   browse closed N=  32  X=   928.6/s  ok=1.000
+16:06:08   browse closed N=  64  X=   937.5/s  ok=1.000
+16:06:37   browse closed N= 128  X=   939.0/s  ok=1.000
+16:07:07   browse closed N= 256  X=   934.9/s  ok=1.000
+16:07:26   checkout: warm-up 60s, closed loop N=16
+16:09:02   checkout open     25/s  ok=1.000  p99=     9.8 ms
+16:09:42   checkout open     50/s  ok=1.000  p99=     8.7 ms
+16:10:22   checkout open    100/s  ok=1.000  p99=     8.4 ms
+16:11:01   checkout open    150/s  ok=1.000  p99=     8.4 ms
+16:11:41   checkout open    200/s  ok=1.000  p99=     8.5 ms
+16:12:20   checkout open    300/s  ok=1.000  p99=     8.4 ms
+16:13:00   checkout open    400/s  ok=1.000  p99=     8.6 ms
+16:13:40   checkout open    500/s  ok=1.000  p99=     8.6 ms
+16:14:28   checkout open    700/s  ok=0.995  p99=  9273.1 ms
+16:15:23   checkout open    900/s  ok=0.609  p99= 10001.5 ms
+16:15:53   checkout closed N=   1  X=   126.3/s  ok=1.000
+16:16:22   checkout closed N=   2  X=   255.2/s  ok=1.000
+16:16:52   checkout closed N=   4  X=   510.3/s  ok=1.000
+16:17:21   checkout closed N=   8  X=   544.9/s  ok=1.000
+16:17:51   checkout closed N=  16  X=   545.2/s  ok=1.000
+16:18:21   checkout closed N=  32  X=   535.3/s  ok=1.000
+16:18:50   checkout closed N=  64  X=   542.2/s  ok=1.000
+16:19:20   checkout closed N= 128  X=   542.5/s  ok=1.000
+16:19:50   checkout closed N= 256  X=   541.4/s  ok=1.000
+16:19:55 rep 2 config C: deploying
+16:20:30   browse: warm-up 60s, closed loop N=16
+16:22:06   browse open     50/s  ok=1.000  p99=     8.0 ms
+16:22:46   browse open    100/s  ok=1.000  p99=     7.3 ms
+16:23:26   browse open    200/s  ok=1.000  p99=    16.5 ms
+16:24:10   browse open    300/s  ok=0.989  p99=  8736.3 ms
+16:25:05   browse open    400/s  ok=0.978  p99= 10000.7 ms
+16:25:35   browse closed N=   1  X=   188.2/s  ok=1.000
+16:26:05   browse closed N=   2  X=   295.5/s  ok=1.000
+16:26:34   browse closed N=   4  X=   296.3/s  ok=1.000
+16:27:04   browse closed N=   8  X=   246.8/s  ok=1.000
+16:27:34   browse closed N=  16  X=   257.2/s  ok=1.000
+16:28:04   browse closed N=  32  X=   270.2/s  ok=1.000
+16:28:33   browse closed N=  64  X=   279.8/s  ok=1.000
+16:29:03   browse closed N= 128  X=   285.9/s  ok=1.000
+16:29:34   browse closed N= 256  X=   292.2/s  ok=1.000
+16:29:52   checkout: warm-up 60s, closed loop N=16
+16:31:29   checkout open     25/s  ok=1.000  p99=    15.6 ms
+16:32:09   checkout open     50/s  ok=1.000  p99=    13.2 ms
+16:32:49   checkout open    100/s  ok=1.000  p99=    12.6 ms
+16:33:28   checkout open    150/s  ok=1.000  p99=    13.0 ms
+16:34:08   checkout open    200/s  ok=1.000  p99=    25.7 ms
+16:34:54   checkout open    300/s  ok=0.989  p99=  8879.3 ms
+16:35:49   checkout open    400/s  ok=0.648  p99= 10001.3 ms
+16:36:19   checkout closed N=   1  X=   105.9/s  ok=1.000
+16:36:48   checkout closed N=   2  X=   207.0/s  ok=1.000
+16:37:18   checkout closed N=   4  X=   252.7/s  ok=1.000
+16:37:48   checkout closed N=   8  X=   208.8/s  ok=1.000
+16:38:18   checkout closed N=  16  X=   215.5/s  ok=1.000
+16:38:47   checkout closed N=  32  X=   232.2/s  ok=1.000
+16:39:17   checkout closed N=  64  X=   243.5/s  ok=1.000
+16:39:47   checkout closed N= 128  X=   248.0/s  ok=1.000
+16:40:18   checkout closed N= 256  X=   249.1/s  ok=1.000
+16:40:23 rep 2 config A: deploying
+16:40:51   browse: warm-up 60s, closed loop N=16
+16:42:28   browse open     50/s  ok=1.000  p99=     5.5 ms
+16:43:08   browse open    100/s  ok=1.000  p99=     5.1 ms
+16:43:47   browse open    200/s  ok=1.000  p99=     4.9 ms
+16:44:27   browse open    300/s  ok=1.000  p99=     4.9 ms
+16:45:07   browse open    400/s  ok=1.000  p99=     4.9 ms
+16:45:46   browse open    500/s  ok=1.000  p99=     5.1 ms
+16:46:26   browse open    600/s  ok=1.000  p99=     5.2 ms
+16:47:06   browse open    800/s  ok=1.000  p99=     5.3 ms
+16:47:48   browse open   1000/s  ok=0.997  p99=  2997.4 ms
+16:48:43   browse open   1400/s  ok=0.746  p99= 10001.5 ms
+16:49:13   browse closed N=   1  X=   219.6/s  ok=1.000
+16:49:42   browse closed N=   2  X=   436.1/s  ok=1.000
+16:50:12   browse closed N=   4  X=   890.3/s  ok=1.000
+16:50:41   browse closed N=   8  X=   934.9/s  ok=1.000
+16:51:11   browse closed N=  16  X=   941.8/s  ok=1.000
+16:51:41   browse closed N=  32  X=   927.0/s  ok=1.000
+16:52:11   browse closed N=  64  X=   930.7/s  ok=1.000
+16:52:40   browse closed N= 128  X=   931.1/s  ok=1.000
+16:53:10   browse closed N= 256  X=   911.8/s  ok=1.000
+16:53:29   checkout: warm-up 60s, closed loop N=16
+16:55:05   checkout open     25/s  ok=1.000  p99=     9.4 ms
+16:55:45   checkout open     50/s  ok=1.000  p99=     9.0 ms
+16:56:25   checkout open    100/s  ok=1.000  p99=     8.8 ms
+16:57:04   checkout open    150/s  ok=1.000  p99=     8.9 ms
+16:57:44   checkout open    200/s  ok=1.000  p99=     9.5 ms
+16:58:23   checkout open    300/s  ok=1.000  p99=     8.9 ms
+16:59:03   checkout open    400/s  ok=1.000  p99=     8.9 ms
+16:59:43   checkout open    500/s  ok=1.000  p99=     8.7 ms
+17:00:32   checkout open    700/s  ok=0.995  p99=  9646.1 ms
+17:01:26   checkout open    900/s  ok=0.603  p99= 10001.3 ms
+17:01:56   checkout closed N=   1  X=   123.9/s  ok=1.000
+17:02:26   checkout closed N=   2  X=   254.4/s  ok=1.000
+17:02:55   checkout closed N=   4  X=   505.4/s  ok=1.000
+17:03:25   checkout closed N=   8  X=   544.0/s  ok=1.000
+17:03:55   checkout closed N=  16  X=   544.3/s  ok=1.000
+17:04:24   checkout closed N=  32  X=   532.0/s  ok=1.000
+17:04:54   checkout closed N=  64  X=   538.2/s  ok=1.000
+17:05:24   checkout closed N= 128  X=   540.8/s  ok=1.000
+17:05:54   checkout closed N= 256  X=   536.3/s  ok=1.000
+17:05:59 rep 2 config B: deploying
+17:06:29   browse: warm-up 60s, closed loop N=16
+17:08:06   browse open     50/s  ok=1.000  p99=     6.4 ms
+17:08:46   browse open    100/s  ok=1.000  p99=     6.2 ms
+17:09:25   browse open    200/s  ok=1.000  p99=     6.2 ms
+17:10:05   browse open    300/s  ok=1.000  p99=     6.0 ms
+17:10:45   browse open    400/s  ok=1.000  p99=     7.5 ms
+17:11:34   browse open    500/s  ok=0.993  p99=  9604.2 ms
+17:12:29   browse open    600/s  ok=0.686  p99= 10001.3 ms
+17:12:58   browse closed N=   1  X=   193.8/s  ok=1.000
+17:13:28   browse closed N=   2  X=   393.3/s  ok=1.000
+17:13:58   browse closed N=   4  X=   397.3/s  ok=1.000
+17:14:27   browse closed N=   8  X=   359.9/s  ok=1.000
+17:14:57   browse closed N=  16  X=   376.0/s  ok=1.000
+17:15:27   browse closed N=  32  X=   373.2/s  ok=1.000
+17:15:57   browse closed N=  64  X=   386.6/s  ok=1.000
+17:16:26   browse closed N= 128  X=   395.4/s  ok=1.000
+17:16:57   browse closed N= 256  X=   391.6/s  ok=1.000
+17:17:15   checkout: warm-up 60s, closed loop N=16
+17:18:52   checkout open     25/s  ok=1.000  p99=    13.6 ms
+17:19:31   checkout open     50/s  ok=1.000  p99=    11.0 ms
+17:20:11   checkout open    100/s  ok=1.000  p99=    10.7 ms
+17:20:51   checkout open    150/s  ok=1.000  p99=    10.6 ms
+17:21:30   checkout open    200/s  ok=1.000  p99=    10.8 ms
+17:22:10   checkout open    300/s  ok=1.000  p99=    11.0 ms
+17:22:54   checkout open    400/s  ok=0.992  p99=  4867.6 ms
+17:23:48   checkout open    500/s  ok=0.852  p99= 10001.2 ms
+17:24:18   checkout closed N=   1  X=   115.9/s  ok=1.000
+17:24:48   checkout closed N=   2  X=   223.1/s  ok=1.000
+17:25:18   checkout closed N=   4  X=   350.5/s  ok=1.000
+17:25:47   checkout closed N=   8  X=   321.0/s  ok=1.000
+17:26:17   checkout closed N=  16  X=   318.7/s  ok=1.000
+17:26:47   checkout closed N=  32  X=   337.6/s  ok=1.000
+17:27:16   checkout closed N=  64  X=   350.9/s  ok=1.000
+17:27:46   checkout closed N= 128  X=   352.7/s  ok=1.000
+17:28:16   checkout closed N= 256  X=   357.5/s  ok=1.000
+17:28:22 campaign complete
+H1: supported
+H2: falsified
+H3: not tested
+cells=9 -> results/kind-work/summary.json, paper/generated/kind-work/, web/data.js
+17:28:52 rep 0 config C: deploying (proportional allocation per workload)
+17:29:38   browse: warm-up 60s, closed loop N=16
+17:31:16   browse open     50/s  ok=1.000  p99=     7.1 ms
+17:31:56   browse open    100/s  ok=1.000  p99=     6.7 ms
+17:32:37   browse open    200/s  ok=1.000  p99=     7.8 ms
+17:33:18   browse open    300/s  ok=1.000  p99=     7.0 ms
+17:33:58   browse open    400/s  ok=1.000  p99=    90.5 ms
+17:34:39   browse open    500/s  ok=1.000  p99=    11.9 ms
+01:26:29 rep 0 config C: deploying (proportional allocation per workload)
+01:27:15   browse: warm-up 60s, closed loop N=16
+01:28:53   browse open     50/s  ok=1.000  p99=     7.0 ms
+01:29:34   browse open    100/s  ok=1.000  p99=     6.5 ms
+01:30:15   browse open    200/s  ok=1.000  p99=     6.4 ms
+01:30:56   browse open    300/s  ok=1.000  p99=     6.4 ms
+01:31:36   browse open    400/s  ok=1.000  p99=     6.4 ms
+01:32:17   browse open    500/s  ok=1.000  p99=     6.4 ms
+01:32:58   browse open    600/s  ok=1.000  p99=    28.8 ms
+01:33:46   browse open    800/s  ok=0.996  p99=  8801.6 ms
+01:34:42   browse open   1000/s  ok=0.694  p99= 10001.5 ms
+01:35:14   browse closed N=   1  X=   183.3/s  ok=1.000
+01:35:45   browse closed N=   2  X=   367.8/s  ok=1.000
+01:36:16   browse closed N=   4  X=   628.9/s  ok=1.000
+01:36:46   browse closed N=   8  X=   567.3/s  ok=1.000
+01:37:17   browse closed N=  16  X=   589.7/s  ok=1.000
+01:37:48   browse closed N=  32  X=   613.4/s  ok=1.000
+01:38:18   browse closed N=  64  X=   636.6/s  ok=1.000
+01:38:49   browse closed N= 128  X=   638.7/s  ok=1.000
+01:39:20   browse closed N= 256  X=   630.8/s  ok=1.000
+01:39:25   checkout: redeploying with this workload's allocation
+01:40:30   checkout: warm-up 60s, closed loop N=16
+01:42:07   checkout open     25/s  ok=1.000  p99=    13.5 ms
+01:42:47   checkout open     50/s  ok=1.000  p99=    12.7 ms
+01:43:28   checkout open    100/s  ok=1.000  p99=    11.8 ms
+01:44:09   checkout open    150/s  ok=1.000  p99=    11.8 ms
+01:44:50   checkout open    200/s  ok=1.000  p99=    12.4 ms
+01:45:30   checkout open    300/s  ok=1.000  p99=    23.7 ms
+01:46:16   checkout open    400/s  ok=0.992  p99=  5992.2 ms
+01:47:13   checkout open    500/s  ok=0.869  p99= 10001.3 ms
+01:47:45   checkout closed N=   1  X=   103.1/s  ok=1.000
+01:48:15   checkout closed N=   2  X=   202.7/s  ok=1.000
+01:48:46   checkout closed N=   4  X=   360.8/s  ok=1.000
+01:49:17   checkout closed N=   8  X=   318.3/s  ok=1.000
+01:49:47   checkout closed N=  16  X=   317.5/s  ok=1.000
+01:50:18   checkout closed N=  32  X=   334.3/s  ok=1.000
+01:50:49   checkout closed N=  64  X=   357.9/s  ok=1.000
+01:51:19   checkout closed N= 128  X=   361.8/s  ok=1.000
+01:51:50   checkout closed N= 256  X=   369.3/s  ok=1.000
+01:51:55 rep 0 config B: deploying (proportional allocation per workload)
+01:53:17   browse: warm-up 60s, closed loop N=16
+01:54:55   browse open     50/s  ok=1.000  p99=     6.6 ms
+01:55:35   browse open    100/s  ok=1.000  p99=     6.2 ms
+01:56:16   browse open    200/s  ok=1.000  p99=     6.1 ms
+01:56:57   browse open    300/s  ok=1.000  p99=     6.2 ms
+01:57:37   browse open    400/s  ok=1.000  p99=     6.2 ms
+01:58:18   browse open    500/s  ok=1.000  p99=     6.2 ms
+01:58:58   browse open    600/s  ok=1.000  p99=     6.4 ms
+01:59:43   browse open    800/s  ok=0.996  p99=  1708.4 ms
+02:00:31   browse open   1000/s  ok=0.997  p99=  8821.5 ms
+02:01:28   browse open   1400/s  ok=0.546  p99= 10001.6 ms
+02:02:00   browse closed N=   1  X=   192.1/s  ok=1.000
+02:02:30   browse closed N=   2  X=   393.2/s  ok=1.000
+02:03:01   browse closed N=   4  X=   760.1/s  ok=1.000
+02:03:31   browse closed N=   8  X=   719.1/s  ok=1.000
+02:04:02   browse closed N=  16  X=   742.5/s  ok=1.000
+02:04:33   browse closed N=  32  X=   757.1/s  ok=1.000
+02:05:03   browse closed N=  64  X=   776.9/s  ok=1.000
+02:05:34   browse closed N= 128  X=   786.7/s  ok=1.000
+02:06:04   browse closed N= 256  X=   794.5/s  ok=1.000
+02:06:09   checkout: redeploying with this workload's allocation
+02:06:41   checkout: warm-up 60s, closed loop N=16
+02:08:18   checkout open     25/s  ok=1.000  p99=    11.9 ms
+02:08:59   checkout open     50/s  ok=1.000  p99=    11.0 ms
+02:09:40   checkout open    100/s  ok=1.000  p99=    10.1 ms
+02:10:20   checkout open    150/s  ok=1.000  p99=    10.1 ms
+02:11:01   checkout open    200/s  ok=1.000  p99=    10.0 ms
+02:11:41   checkout open    300/s  ok=1.000  p99=     9.9 ms
+02:12:22   checkout open    400/s  ok=1.000  p99=    10.5 ms
+02:13:06   checkout open    500/s  ok=0.993  p99=  3984.6 ms
+02:14:02   checkout open    700/s  ok=0.678  p99= 10001.5 ms
+02:14:34   checkout closed N=   1  X=   113.2/s  ok=1.000
+02:15:04   checkout closed N=   2  X=   222.4/s  ok=1.000
+02:15:35   checkout closed N=   4  X=   437.4/s  ok=1.000
+02:16:06   checkout closed N=   8  X=   401.7/s  ok=1.000
+02:16:36   checkout closed N=  16  X=   407.6/s  ok=1.000
+02:17:07   checkout closed N=  32  X=   426.0/s  ok=1.000
+02:17:37   checkout closed N=  64  X=   437.9/s  ok=1.000
+02:18:08   checkout closed N= 128  X=   447.5/s  ok=1.000
+02:18:38   checkout closed N= 256  X=   448.5/s  ok=1.000
+02:18:43 rep 0 config A: deploying
+02:19:13   browse: warm-up 60s, closed loop N=16
+02:20:50   browse open     50/s  ok=1.000  p99=     5.3 ms
+02:21:31   browse open    100/s  ok=1.000  p99=     4.9 ms
+02:22:11   browse open    200/s  ok=1.000  p99=     4.8 ms
+02:22:52   browse open    300/s  ok=1.000  p99=     4.8 ms
+02:23:33   browse open    400/s  ok=1.000  p99=     4.8 ms
+02:24:13   browse open    500/s  ok=1.000  p99=     4.8 ms
+02:24:54   browse open    600/s  ok=1.000  p99=     4.8 ms
+02:25:34   browse open    800/s  ok=1.000  p99=     5.0 ms
+02:26:17   browse open   1000/s  ok=0.997  p99=  2596.7 ms
+02:27:14   browse open   1400/s  ok=0.749  p99= 10001.5 ms
+02:27:45   browse closed N=   1  X=   221.9/s  ok=1.000
+02:28:16   browse closed N=   2  X=   440.8/s  ok=1.000
+02:28:46   browse closed N=   4  X=   891.2/s  ok=1.000
+02:29:17   browse closed N=   8  X=   939.5/s  ok=1.000
+02:29:47   browse closed N=  16  X=   945.2/s  ok=1.000
+02:30:18   browse closed N=  32  X=   933.6/s  ok=1.000
+02:30:49   browse closed N=  64  X=   935.8/s  ok=1.000
+02:31:19   browse closed N= 128  X=   936.6/s  ok=1.000
+02:31:50   browse closed N= 256  X=   936.0/s  ok=1.000
+02:32:09   checkout: warm-up 60s, closed loop N=16
+02:33:47   checkout open     25/s  ok=1.000  p99=     9.3 ms
+02:34:27   checkout open     50/s  ok=1.000  p99=     8.7 ms
+02:35:07   checkout open    100/s  ok=1.000  p99=     8.2 ms
+02:35:48   checkout open    150/s  ok=1.000  p99=     8.4 ms
+02:36:28   checkout open    200/s  ok=1.000  p99=     8.4 ms
+02:37:09   checkout open    300/s  ok=1.000  p99=     8.3 ms
+02:37:49   checkout open    400/s  ok=1.000  p99=     8.3 ms
+02:38:30   checkout open    500/s  ok=1.000  p99=     8.5 ms
+02:39:19   checkout open    700/s  ok=0.995  p99=  9204.4 ms
+02:40:15   checkout open    900/s  ok=0.615  p99= 10001.5 ms
+02:40:47   checkout closed N=   1  X=   127.8/s  ok=1.000
+02:41:17   checkout closed N=   2  X=   255.7/s  ok=1.000
+02:41:48   checkout closed N=   4  X=   511.4/s  ok=1.000
+02:42:19   checkout closed N=   8  X=   545.6/s  ok=1.000
+02:42:49   checkout closed N=  16  X=   545.0/s  ok=1.000
+02:43:20   checkout closed N=  32  X=   535.1/s  ok=1.000
+02:43:50   checkout closed N=  64  X=   542.6/s  ok=1.000
+02:44:21   checkout closed N= 128  X=   543.0/s  ok=1.000
+02:44:51   checkout closed N= 256  X=   543.8/s  ok=1.000
+02:44:56 rep 1 config C: deploying (proportional allocation per workload)
+02:45:54   browse: warm-up 60s, closed loop N=16
+02:47:32   browse open     50/s  ok=1.000  p99=     7.3 ms
+02:48:13   browse open    100/s  ok=1.000  p99=     6.8 ms
+02:48:53   browse open    200/s  ok=1.000  p99=     6.9 ms
+02:49:34   browse open    300/s  ok=1.000  p99=     7.0 ms
+02:50:15   browse open    400/s  ok=1.000  p99=     7.1 ms
+02:50:55   browse open    500/s  ok=1.000  p99=     7.4 ms
+02:51:36   browse open    600/s  ok=1.000  p99=   441.6 ms
+02:52:25   browse open    800/s  ok=0.996  p99=  8523.8 ms
+02:53:22   browse open   1000/s  ok=0.693  p99= 10001.5 ms
+02:53:53   browse closed N=   1  X=   187.0/s  ok=1.000
+02:54:24   browse closed N=   2  X=   371.0/s  ok=1.000
+02:54:55   browse closed N=   4  X=   628.7/s  ok=1.000
+02:55:26   browse closed N=   8  X=   568.2/s  ok=1.000
+02:55:56   browse closed N=  16  X=   594.8/s  ok=1.000
+02:56:27   browse closed N=  32  X=   622.1/s  ok=1.000
+02:56:58   browse closed N=  64  X=   638.9/s  ok=1.000
+02:57:28   browse closed N= 128  X=   648.1/s  ok=1.000
+02:57:59   browse closed N= 256  X=   642.6/s  ok=1.000
+02:58:04   checkout: redeploying with this workload's allocation
+02:59:07   checkout: warm-up 60s, closed loop N=16
+03:00:44   checkout open     25/s  ok=1.000  p99=    13.5 ms
+03:01:25   checkout open     50/s  ok=1.000  p99=    12.4 ms
+03:02:06   checkout open    100/s  ok=1.000  p99=    11.8 ms
+03:02:46   checkout open    150/s  ok=1.000  p99=    12.0 ms
+03:03:27   checkout open    200/s  ok=1.000  p99=    12.0 ms
+03:04:08   checkout open    300/s  ok=1.000  p99=    23.9 ms
+03:04:53   checkout open    400/s  ok=0.992  p99=  4911.1 ms
+03:05:50   checkout open    500/s  ok=0.961  p99= 10001.0 ms
+03:06:21   checkout closed N=   1  X=   104.9/s  ok=1.000
+03:06:52   checkout closed N=   2  X=   203.9/s  ok=1.000
+03:07:23   checkout closed N=   4  X=   363.8/s  ok=1.000
+03:07:53   checkout closed N=   8  X=   323.4/s  ok=1.000
+03:08:24   checkout closed N=  16  X=   324.9/s  ok=1.000
+03:08:55   checkout closed N=  32  X=   342.2/s  ok=1.000
+03:09:25   checkout closed N=  64  X=   358.4/s  ok=1.000
+03:09:56   checkout closed N= 128  X=   364.5/s  ok=1.000
+03:10:27   checkout closed N= 256  X=   375.4/s  ok=1.000
+03:10:32 rep 1 config B: deploying (proportional allocation per workload)
+03:11:56   browse: warm-up 60s, closed loop N=16
+03:13:34   browse open     50/s  ok=1.000  p99=     6.3 ms
+03:14:14   browse open    100/s  ok=1.000  p99=     6.0 ms
+03:14:55   browse open    200/s  ok=1.000  p99=     6.0 ms
+03:15:35   browse open    300/s  ok=1.000  p99=     6.0 ms
+03:16:16   browse open    400/s  ok=1.000  p99=     6.0 ms
+03:16:56   browse open    500/s  ok=1.000  p99=     6.0 ms
+03:17:37   browse open    600/s  ok=1.000  p99=     6.1 ms
+03:18:24   browse open    800/s  ok=0.996  p99=  1596.3 ms
+03:19:12   browse open   1000/s  ok=0.997  p99=  8480.6 ms
+03:20:09   browse open   1400/s  ok=0.552  p99= 10001.5 ms
+03:20:41   browse closed N=   1  X=   193.9/s  ok=1.000
+03:21:11   browse closed N=   2  X=   396.5/s  ok=1.000
+03:21:42   browse closed N=   4  X=   762.9/s  ok=1.000
+03:22:13   browse closed N=   8  X=   723.0/s  ok=1.000
+03:22:43   browse closed N=  16  X=   747.1/s  ok=1.000
+03:23:14   browse closed N=  32  X=   764.3/s  ok=1.000
+03:23:44   browse closed N=  64  X=   778.3/s  ok=1.000
+03:24:15   browse closed N= 128  X=   789.2/s  ok=1.000
+03:24:45   browse closed N= 256  X=   796.6/s  ok=1.000
+03:24:50   checkout: redeploying with this workload's allocation
+03:25:22   checkout: warm-up 60s, closed loop N=16
+03:27:00   checkout open     25/s  ok=1.000  p99=    11.8 ms
+03:27:40   checkout open     50/s  ok=1.000  p99=    10.6 ms
+03:28:20   checkout open    100/s  ok=1.000  p99=    10.2 ms
+03:29:01   checkout open    150/s  ok=1.000  p99=    10.1 ms
+03:29:41   checkout open    200/s  ok=1.000  p99=    10.0 ms
+03:30:22   checkout open    300/s  ok=1.000  p99=     9.9 ms
+03:31:03   checkout open    400/s  ok=1.000  p99=    10.9 ms
+03:31:46   checkout open    500/s  ok=0.993  p99=  4396.8 ms
+03:32:43   checkout open    700/s  ok=0.676  p99= 10001.5 ms
+03:33:15   checkout closed N=   1  X=   113.0/s  ok=1.000
+03:33:45   checkout closed N=   2  X=   222.9/s  ok=1.000
+03:34:16   checkout closed N=   4  X=   440.0/s  ok=1.000
+03:34:46   checkout closed N=   8  X=   401.1/s  ok=1.000
+03:35:17   checkout closed N=  16  X=   407.4/s  ok=1.000
+03:35:47   checkout closed N=  32  X=   427.3/s  ok=1.000
+03:36:18   checkout closed N=  64  X=   438.8/s  ok=1.000
+03:36:49   checkout closed N= 128  X=   442.0/s  ok=1.000
+03:37:19   checkout closed N= 256  X=   451.7/s  ok=1.000
+03:37:24 rep 1 config A: deploying
+03:37:53   browse: warm-up 60s, closed loop N=16
+03:39:31   browse open     50/s  ok=1.000  p99=     5.3 ms
+03:40:11   browse open    100/s  ok=1.000  p99=     4.9 ms
+03:40:51   browse open    200/s  ok=1.000  p99=     4.8 ms
+03:41:32   browse open    300/s  ok=1.000  p99=     4.8 ms
+03:42:12   browse open    400/s  ok=1.000  p99=     4.8 ms
+03:42:53   browse open    500/s  ok=1.000  p99=     4.9 ms
+03:43:33   browse open    600/s  ok=1.000  p99=     4.8 ms
+03:44:14   browse open    800/s  ok=1.000  p99=     5.1 ms
+03:44:57   browse open   1000/s  ok=0.997  p99=  2393.2 ms
+03:45:53   browse open   1400/s  ok=0.761  p99= 10001.5 ms
+03:46:25   browse closed N=   1  X=   221.3/s  ok=1.000
+03:46:55   browse closed N=   2  X=   437.5/s  ok=1.000
+03:47:26   browse closed N=   4  X=   894.0/s  ok=1.000
+03:47:57   browse closed N=   8  X=   941.1/s  ok=1.000
+03:48:27   browse closed N=  16  X=   949.8/s  ok=1.000
+03:48:58   browse closed N=  32  X=   937.2/s  ok=1.000
+03:49:28   browse closed N=  64  X=   943.4/s  ok=1.000
+03:49:59   browse closed N= 128  X=   941.8/s  ok=1.000
+03:50:30   browse closed N= 256  X=   941.5/s  ok=1.000
+03:50:49   checkout: warm-up 60s, closed loop N=16
+03:52:27   checkout open     25/s  ok=1.000  p99=     9.3 ms
+03:53:06   checkout open     50/s  ok=1.000  p99=     8.9 ms
+03:53:46   checkout open    100/s  ok=1.000  p99=     8.3 ms
+03:54:26   checkout open    150/s  ok=1.000  p99=     8.3 ms
+03:55:07   checkout open    200/s  ok=1.000  p99=     8.4 ms
+03:55:48   checkout open    300/s  ok=1.000  p99=     8.3 ms
+03:56:28   checkout open    400/s  ok=1.000  p99=     8.2 ms
+03:57:09   checkout open    500/s  ok=1.000  p99=     8.3 ms
+03:57:57   checkout open    700/s  ok=0.995  p99=  9079.3 ms
+03:58:54   checkout open    900/s  ok=0.621  p99= 10001.6 ms
+03:59:26   checkout closed N=   1  X=   125.4/s  ok=1.000
+03:59:56   checkout closed N=   2  X=   255.8/s  ok=1.000
+04:00:27   checkout closed N=   4  X=   510.1/s  ok=1.000
+04:00:57   checkout closed N=   8  X=   547.2/s  ok=1.000
+04:01:28   checkout closed N=  16  X=   546.3/s  ok=1.000
+04:01:59   checkout closed N=  32  X=   536.2/s  ok=1.000
+04:02:29   checkout closed N=  64  X=   544.6/s  ok=1.000
+04:03:00   checkout closed N= 128  X=   541.9/s  ok=1.000
+04:03:30   checkout closed N= 256  X=   543.3/s  ok=1.000
+04:03:35 rep 2 config C: deploying (proportional allocation per workload)
+04:04:31   browse: warm-up 60s, closed loop N=16
+04:06:08   browse open     50/s  ok=1.000  p99=     7.5 ms
+04:06:49   browse open    100/s  ok=1.000  p99=     6.8 ms
+04:07:29   browse open    200/s  ok=1.000  p99=     6.9 ms
+04:08:10   browse open    300/s  ok=1.000  p99=     7.1 ms
+04:08:51   browse open    400/s  ok=1.000  p99=     7.3 ms
+04:09:31   browse open    500/s  ok=1.000  p99=     7.9 ms
+04:10:12   browse open    600/s  ok=1.000  p99=   694.5 ms
+04:11:00   browse open    800/s  ok=0.996  p99=  7846.5 ms
+04:11:57   browse open   1000/s  ok=0.702  p99= 10001.5 ms
+04:12:29   browse closed N=   1  X=   185.4/s  ok=1.000
+04:12:59   browse closed N=   2  X=   370.7/s  ok=1.000
+04:13:30   browse closed N=   4  X=   631.1/s  ok=1.000
+04:14:01   browse closed N=   8  X=   571.6/s  ok=1.000
+04:14:31   browse closed N=  16  X=   594.1/s  ok=1.000
+04:15:02   browse closed N=  32  X=   618.3/s  ok=1.000
+04:15:33   browse closed N=  64  X=   637.6/s  ok=1.000
+04:16:03   browse closed N= 128  X=   649.4/s  ok=1.000
+04:16:34   browse closed N= 256  X=   649.8/s  ok=1.000
+04:16:39   checkout: redeploying with this workload's allocation
+04:17:47   checkout: warm-up 60s, closed loop N=16
+04:19:24   checkout open     25/s  ok=1.000  p99=    14.5 ms
+04:20:04   checkout open     50/s  ok=1.000  p99=    12.3 ms
+04:20:45   checkout open    100/s  ok=1.000  p99=    12.0 ms
+04:21:26   checkout open    150/s  ok=1.000  p99=    12.3 ms
+04:22:06   checkout open    200/s  ok=1.000  p99=    12.3 ms
+04:22:47   checkout open    300/s  ok=1.000  p99=    24.6 ms
+04:23:33   checkout open    400/s  ok=0.992  p99=  6432.7 ms
+04:24:30   checkout open    500/s  ok=0.854  p99= 10001.3 ms
+04:25:01   checkout closed N=   1  X=   104.0/s  ok=1.000
+04:25:32   checkout closed N=   2  X=   204.1/s  ok=1.000
+04:26:03   checkout closed N=   4  X=   357.7/s  ok=1.000
+04:26:34   checkout closed N=   8  X=   318.5/s  ok=1.000
+04:27:04   checkout closed N=  16  X=   320.9/s  ok=1.000
+04:27:35   checkout closed N=  32  X=   341.9/s  ok=1.000
+04:28:06   checkout closed N=  64  X=   354.3/s  ok=1.000
+04:28:36   checkout closed N= 128  X=   362.8/s  ok=1.000
+04:29:07   checkout closed N= 256  X=   371.5/s  ok=1.000
+04:29:12 rep 2 config A: deploying
+04:29:41   browse: warm-up 60s, closed loop N=16
+04:31:19   browse open     50/s  ok=1.000  p99=     5.4 ms
+04:31:59   browse open    100/s  ok=1.000  p99=     4.9 ms
+04:32:40   browse open    200/s  ok=1.000  p99=     4.8 ms
+04:33:20   browse open    300/s  ok=1.000  p99=     4.9 ms
+04:34:01   browse open    400/s  ok=1.000  p99=     5.0 ms
+04:34:42   browse open    500/s  ok=1.000  p99=     5.1 ms
+04:35:22   browse open    600/s  ok=1.000  p99=     5.2 ms
+04:36:03   browse open    800/s  ok=1.000  p99=     5.3 ms
+04:36:45   browse open   1000/s  ok=0.997  p99=  2553.6 ms
+04:37:42   browse open   1400/s  ok=0.751  p99= 10001.5 ms
+04:38:14   browse closed N=   1  X=   220.3/s  ok=1.000
+04:38:44   browse closed N=   2  X=   445.3/s  ok=1.000
+04:39:15   browse closed N=   4  X=   894.8/s  ok=1.000
+04:39:45   browse closed N=   8  X=   937.9/s  ok=1.000
+04:40:16   browse closed N=  16  X=   946.2/s  ok=1.000
+04:40:47   browse closed N=  32  X=   931.4/s  ok=1.000
+04:41:17   browse closed N=  64  X=   939.0/s  ok=1.000
+04:41:48   browse closed N= 128  X=   942.2/s  ok=1.000
+04:42:18   browse closed N= 256  X=   940.2/s  ok=1.000
+04:42:38   checkout: warm-up 60s, closed loop N=16
+04:44:16   checkout open     25/s  ok=1.000  p99=     9.5 ms
+04:44:55   checkout open     50/s  ok=1.000  p99=     8.6 ms
+04:45:36   checkout open    100/s  ok=1.000  p99=     8.5 ms
+04:46:16   checkout open    150/s  ok=1.000  p99=     8.3 ms
+04:46:57   checkout open    200/s  ok=1.000  p99=     8.4 ms
+04:47:37   checkout open    300/s  ok=1.000  p99=     8.4 ms
+04:48:18   checkout open    400/s  ok=1.000  p99=     8.3 ms
+04:48:59   checkout open    500/s  ok=1.000  p99=     8.6 ms
+04:49:47   checkout open    700/s  ok=0.995  p99=  9036.4 ms
+04:50:44   checkout open    900/s  ok=0.617  p99= 10001.5 ms
+04:51:15   checkout closed N=   1  X=   127.3/s  ok=1.000
+04:51:46   checkout closed N=   2  X=   256.8/s  ok=1.000
+04:52:17   checkout closed N=   4  X=   513.0/s  ok=1.000
+04:52:47   checkout closed N=   8  X=   547.1/s  ok=1.000
+04:53:18   checkout closed N=  16  X=   546.0/s  ok=1.000
+04:53:48   checkout closed N=  32  X=   536.9/s  ok=1.000
+04:54:19   checkout closed N=  64  X=   543.6/s  ok=1.000
+04:54:49   checkout closed N= 128  X=   544.1/s  ok=1.000
+04:55:20   checkout closed N= 256  X=   543.4/s  ok=1.000
+04:55:25 rep 2 config B: deploying (proportional allocation per workload)
+04:56:53   browse: warm-up 60s, closed loop N=16
+04:58:31   browse open     50/s  ok=1.000  p99=     6.3 ms
+04:59:11   browse open    100/s  ok=1.000  p99=     6.0 ms
+04:59:52   browse open    200/s  ok=1.000  p99=     6.0 ms
+05:00:32   browse open    300/s  ok=1.000  p99=     6.1 ms
+05:01:13   browse open    400/s  ok=1.000  p99=     6.1 ms
+05:01:54   browse open    500/s  ok=1.000  p99=     6.1 ms
+05:02:34   browse open    600/s  ok=1.000  p99=     6.2 ms
+05:03:16   browse open    800/s  ok=1.000  p99=  1179.9 ms
+05:04:03   browse open   1000/s  ok=0.997  p99=  7757.0 ms
+05:05:00   browse open   1400/s  ok=0.564  p99= 10001.6 ms
+05:05:32   browse closed N=   1  X=   197.7/s  ok=1.000
+05:06:02   browse closed N=   2  X=   398.3/s  ok=1.000
+05:06:33   browse closed N=   4  X=   767.3/s  ok=1.000
+05:07:04   browse closed N=   8  X=   722.9/s  ok=1.000
+05:07:34   browse closed N=  16  X=   746.8/s  ok=1.000
+05:08:05   browse closed N=  32  X=   766.8/s  ok=1.000
+05:08:35   browse closed N=  64  X=   777.6/s  ok=1.000
+05:09:06   browse closed N= 128  X=   791.0/s  ok=1.000
+05:09:37   browse closed N= 256  X=   794.7/s  ok=1.000
+05:09:42   checkout: redeploying with this workload's allocation
+05:10:14   checkout: warm-up 60s, closed loop N=16
+05:11:51   checkout open     25/s  ok=1.000  p99=    11.7 ms
+05:12:31   checkout open     50/s  ok=1.000  p99=    10.5 ms
+05:13:12   checkout open    100/s  ok=1.000  p99=     9.9 ms
+05:13:52   checkout open    150/s  ok=1.000  p99=    10.1 ms
+05:14:33   checkout open    200/s  ok=1.000  p99=    10.1 ms
+05:15:13   checkout open    300/s  ok=1.000  p99=     9.8 ms
+05:15:54   checkout open    400/s  ok=1.000  p99=    11.2 ms
+05:16:39   checkout open    500/s  ok=0.993  p99=  4365.2 ms
+05:17:34   checkout open    700/s  ok=0.677  p99= 10001.5 ms
+05:18:06   checkout closed N=   1  X=   109.5/s  ok=1.000
+05:18:36   checkout closed N=   2  X=   219.3/s  ok=1.000
+05:19:07   checkout closed N=   4  X=   438.9/s  ok=1.000
+05:19:38   checkout closed N=   8  X=   403.8/s  ok=1.000
+05:20:08   checkout closed N=  16  X=   405.8/s  ok=1.000
+05:20:39   checkout closed N=  32  X=   422.9/s  ok=1.000
+05:21:09   checkout closed N=  64  X=   436.1/s  ok=1.000
+05:21:40   checkout closed N= 128  X=   449.5/s  ok=1.000
+05:22:11   checkout closed N= 256  X=   444.4/s  ok=1.000
+05:22:16 campaign complete
+05:22:16 service-demand treatment finished; smoke-testing the autoscaling mode
+05:22:16 rep 0 config C: deploying (proportional allocation per workload)
+05:23:11   browse: warm-up 20s, closed loop N=16
+05:25:10   browse ramp   300/s  ok=1.000  p99=     5.3 ms  replicas={'auth': 2, 'carts': 1, 'orders': 1, 'products': 2, 'profiles': 1, 'reservations': 1, 'search': 2, 'stock': 1}  quota=4133m
+05:26:16   browse ramp  1000/s  ok=1.000  p99=    50.5 ms  replicas={'auth': 2, 'carts': 1, 'orders': 1, 'products': 2, 'profiles': 1, 'reservations': 1, 'search': 2, 'stock': 1}  quota=4133m
+05:27:25   browse ramp  2000/s  ok=1.000  p99=   379.5 ms  replicas={'auth': 2, 'carts': 1, 'orders': 1, 'products': 2, 'profiles': 1, 'reservations': 1, 'search': 3, 'stock': 2}  quota=5026m
+05:27:25 campaign complete
+steps=3 samples=21 peak replicas of one service=3 quota used (last)=5026m
+05:27:26 smoke test passed
