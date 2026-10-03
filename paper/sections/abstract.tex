@@ -5,7 +5,7 @@ eight services with an Istio sidecar mesh, built from one binary whose modules a
 request's latency into layers, and cgroup counters record CPU use and throttling. In \the\numexpr\xo{cells}+\xo{prop/cells}+\xo{work/cells}+\xo{workprop/cells}+\xo{eks/cells}+\xo{hpa/cells}\relax{} fresh
 deployments on a local cluster and on Amazon EKS, decomposition raised low-load p99 latency
 \xo{h1/min}--\xo{h1/max} times locally (equal split) and \xo{eks/h1/min}--\xo{eks/h1/max} times in the cloud,
-mostly as inter-service transit. Under an equal CPU budget, capacity fell
+through inter-service transit and, in the cloud, longer database time. Under an equal CPU budget, capacity fell
 to \xo{peakpct/min}--\xo{peakpct/max}\% (local) and \xo{eks/peakpct/min}--\xo{eks/peakpct/max}\% (cloud) of the
 monolith's, bounded by the edge service's CPU quota. Allocating CPU by demand raised it to
 \xo{prop/peakpct/min}--\xo{prop/peakpct/max}\%, and with 1\,ms of CPU in every module operation to

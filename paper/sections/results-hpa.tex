@@ -37,7 +37,7 @@ dashed line is the shared quota of \xo{hpa/cap} cores.}
 
 Figure~\ref{fig:hpa} shows the autoscaling treatment, \xo{hpa/cells} fresh deployments of A, B and~C. The monolith
 sustained every level up to \xo{hpa/sustained/browse/A} browse and \xo{hpa/sustained/checkout/A} checkout requests
-per second, and it did so with a single replica. At those rates its application container stayed below the
+per second, and above the first level it did so with a single replica. At those rates its application container stayed below the
 autoscaler's 70\% target, so it requested only its starting \xo{hpa/topcpu/browse/A} cores, 3.5 for the application
 and 4 for the database. The decomposed configurations sustained every level only up to \xo{hpa/sustained/browse/B}
 browse requests per second (B and~C) and \xo{hpa/sustained/checkout/B} (B) and \xo{hpa/sustained/checkout/C} (C)

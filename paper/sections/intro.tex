@@ -9,8 +9,8 @@ service from a distributed design into a single process and reported that this `
 by over 90\%''~\cite{Kolny2023}, and Su et al.\ analyse four such moves back to a monolith~\cite{Su2024}.
 
 The published comparisons agree more than they appear to. Where both styles run on the same hardware, the
-monolith is mostly faster or equal; the microservice version comes out ahead when it receives more instances or
-other resources (Section~\ref{sec:related}). What the comparisons rarely show is how large the gap is and where it comes from. Of the twelve we
+monolith is mostly faster or equal; the microservice version draws level or comes out ahead when it receives more
+instances or other resources (Section~\ref{sec:related}). What the comparisons rarely show is how large the gap is and where it comes from. Of the twelve we
 review in Section~\ref{sec:related}, only two report a tail percentile, and most drive load with closed loops,
 which slow down with the system they measure and so hide the tail~\cite{Schroeder2006,Tene2015}. None splits
 end-to-end latency into the layers where distribution adds cost. Only one holds the resources of both styles equal throughout, and two more only in their local runs. This
@@ -64,6 +64,5 @@ in this article is generated.
 
 Section~\ref{sec:background} explains the mechanisms by which distribution costs time and the models used to
 analyse them. Section~\ref{sec:related} reviews related empirical work. Sections~\ref{sec:testbed}
-and~\ref{sec:method} describe the testbed and the experimental method. Section~\ref{sec:results} reports the
-results, Section~\ref{sec:discussion} discusses what they mean for practitioners, and
+and~\ref{sec:method} describe the testbed and the experimental method. Section~\ref{sec:results} reports the results, Section~\ref{sec:discussion} discusses what they mean for practitioners,
 Section~\ref{sec:threats} discusses threats to validity, and Section~\ref{sec:conclusion} concludes.

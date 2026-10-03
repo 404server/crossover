@@ -21,16 +21,16 @@ Raw Vegeta results of every cell (several GB) are archived on Zenodo: [10.5281/z
 Unpack them into `results/raw/` and run `analysis/analyze.py --env <env>` to regenerate every summary,
 paper number and the dashboard data. Environments: `kind` (equal CPU split) and `kind-prop`
 (demand-proportional CPU allocation from `run/alloc-prop.json`, derived by `analysis/alloc.py`) on the
-workstation, and `eks` (equal CPU split) on Amazon EKS.
+workstation, `kind-work` and `kind-work-prop` (1 ms of CPU in every module operation, equal and proportional
+split), and `eks` (equal CPU split) and `eks-hpa` (autoscaling, `analysis/analyze_hpa.py`) on Amazon EKS.
 
 ## History
 
 The measurement protocol (four configurations, per-layer latency decomposition, USL-based crossover analysis,
-hypotheses H1–H3) was designed in spring 2026 and presented as a talk at a KBTU university conference, without
-proceedings. The testbed, campaign runner and analysis pipeline in this repository were implemented, and the local
+hypotheses H1–H3) was designed in spring 2026. The testbed, campaign runner and analysis pipeline in this repository were implemented, and the local
 and cloud campaigns were run, in September–October 2026. A first cloud campaign was discarded because result files
 arrived truncated (see "Run on Amazon EKS"). Building the testbed also changed parts of the protocol (see the
-paper's Discussion, "The protocol, revisited").
+paper's Discussion, "Lessons for testbed builders").
 
 ## How the testbed isolates the architecture
 

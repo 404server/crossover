@@ -5,14 +5,14 @@ We compared a monolith with three decompositions of identical code, on a local c
 equal CPU budget and a demand-proportional allocation and at two levels of service demand.
 We also added autoscalers under a shared CPU ceiling in the cloud.
 Decomposition added latency at low load: the p99 of the decomposed configurations was \xo{h1/min}--\xo{h1/max}
-times the monolith's locally and \xo{eks/h1/min}--\xo{eks/h1/max} times in the cloud, mostly inter-service transit.
+times the monolith's locally and \xo{eks/h1/min}--\xo{eks/h1/max} times in the cloud, mostly inter-service transit and, in the cloud, also longer database time.
 It cut capacity to \xo{peakpct/min}--\xo{peakpct/max}\% (local) and \xo{eks/peakpct/min}--\xo{eks/peakpct/max}\%
 (cloud) of the monolith's, because the edge service exhausted its CPU share while the rest of the budget stayed
 idle. Allocating the budget by demand raised this to at most \xo{prop/peakpct/max}\%, and with 1\,ms of CPU in every
 module operation to at most \xo{workprop/peakpct/max}\%. A sidecar mesh added
 \xo{mesh/perhop/min}--\xo{eks/mesh/perhop/max}\,ms per call and more CPU than the application. With autoscalers the
 monolith sustained \xo{hpa/sustained/browse/A} browse requests per second on one replica; the decomposed
-configurations sustained every level only up to \xo{hpa/sustained/browse/B} and the monolith's level in one
+configurations sustained every level only up to \xo{hpa/sustained/browse/B}, and B the monolith's level in one
 repetition, at the ceiling. No decomposed configuration overtook the monolith
 in any setting.
 

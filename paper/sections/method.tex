@@ -106,7 +106,7 @@ separately as part of the mesh's cost.
 The JVM settings are identical everywhere: G1 is selected explicitly (under small CPU limits the JVM would
 otherwise pick the serial collector for the fine-grained services and G1 for the monolith), the heap is capped
 at 50\% of the container limit, Tomcat has its default 200 worker threads, and HikariCP its default ten
-connections. Two settings were changed from their defaults after calibration. Tomcat accepts at most 1{,}000
+connections. Two further settings were changed from their defaults after calibration. Tomcat accepts at most 1{,}000
 connections per process, so that an overloaded service queues work in the kernel backlog instead of buffering it
 in its own memory. And the server does not close a keep-alive connection after a fixed number of requests (only
 after 75\,s idle), because the JDK HTTP client does not retry a POST that races with a server-side close.
@@ -263,7 +263,7 @@ the equal split and then under a demand-proportional allocation. The proportiona
 equal-split run with this demand, in the same way as above.
 
 \paragraph{Autoscaling under a shared ceiling.} The scalability argument for microservices is usually made for
-elastic capacity, so the third treatment adds it. Every application deployment gets a Horizontal Pod Autoscaler
+elastic capacity, so the last treatment adds it. Every application deployment gets a Horizontal Pod Autoscaler
 (\texttt{autoscaling/v2}, 70\% target CPU utilisation, one to 24 replicas, default behaviour) and starts from the
 demand-proportional shares. A namespace \texttt{ResourceQuota} caps the CPU requested by all pods of a configuration
 at the same ceiling for every configuration, three times the application budget plus the database budget. Database

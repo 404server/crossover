@@ -14,7 +14,7 @@ is slower than the monolith. For browse, p99 was \xo{p99/browse/A/50}\,ms in~A, 
 \xo{p99/browse/C/50}\,ms in~C and \xo{p99/browse/D/50}\,ms in~D; for checkout, \xo{p99/checkout/A/25},
 \xo{p99/checkout/B/25}, \xo{p99/checkout/C/25} and \xo{p99/checkout/D/25}\,ms. Table~\ref{tab:h1} gives the
 ratios to the monolith with their Bonferroni-adjusted intervals. All six intervals lie above one, so
-\textbf{H1 is supported}. At low load the p99 of B is \xo{ratio/browse/B/50/est} (browse) and
+\textbf{H1 is supported}. Pooling the requests of all repetitions, the p99 of B at low load is \xo{ratio/browse/B/50/est} (browse) and
 \xo{ratio/checkout/B/25/est} (checkout) times the monolith's, that of C \xo{ratio/browse/C/50/est} and
 \xo{ratio/checkout/C/25/est} times, and that of D \xo{ratio/browse/D/50/est} and \xo{ratio/checkout/D/25/est}
 times.

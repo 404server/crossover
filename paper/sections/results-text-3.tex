@@ -6,7 +6,7 @@
 Figure~\ref{fig:layers} breaks the mean latency at the lowest rate into the six layers. In the monolith most
 of it is database time (\xo{layer/browse/A/50/db} of \xo{mean/browse/A/50}\,ms for browse,
 \xo{layer/checkout/A/25/db} of \xo{mean/checkout/A/25}\,ms for checkout); application code, serialisation and
-framework dispatch together take a few tenths of a millisecond. Decomposition leaves database time roughly where
+framework dispatch together take about a tenth of a millisecond. Decomposition leaves database time roughly where
 it was (browse: \xo{layer/browse/B/50/db}\,ms in~B and \xo{layer/browse/C/50/db}\,ms in~C) and adds inter-service
 transit on top: \xo{layer/browse/B/50/net} and \xo{layer/browse/C/50/net}\,ms for browse in B and~C,
 \xo{layer/checkout/B/25/net} and \xo{layer/checkout/C/25/net}\,ms for checkout. Per hop this is

@@ -3,7 +3,8 @@
 
 \begin{table}[t]
 \caption{Local and cloud environment side by side, equal CPU budget. p99 at the lowest offered rate (browse 50,
-checkout 25 requests/s) and its ratio to the monolith (H1); measured peak throughput and its ratio to the monolith (H2); inter-service transit per hop at low load. Medians across repetitions.}
+checkout 25 requests/s) and its ratio to the monolith (H1); measured peak throughput and its ratio to the monolith (H2); inter-service transit per hop at low load. p99, peak and transit are medians across repetitions; the p99 ratio is computed from the requests of all
+repetitions pooled, as in Table~\ref{tab:h1}, so it can differ from the ratio of the medians shown.}
 \label{tab:env}
 \centering\scriptsize
 \setlength{\tabcolsep}{3pt}
@@ -20,16 +21,18 @@ Workload & Configuration & p99 & vs.\ A & Peak & vs.\ A & hop & p99 & vs.\ A & P
 
 The cloud campaign repeated the main comparison on Amazon EKS: \xo{eks/cells} fresh deployments over
 \xo{eks/hours}\,h, with every response again byte-identical to the monolith's (\xo{eks/equiv/match} of
-\xo{eks/equiv/total}). Table~\ref{tab:env} sets its results beside the local ones. The verdicts are the same:
-H1 is supported, H2 is falsified, H3 is supported, and the bottleneck bound names the same container in every
-configuration, the monolith's database and the edge service of each decomposed one.
+\xo{eks/equiv/total}). Table~\ref{tab:env} sets its results beside the local ones. The verdicts are the same: H1 is supported, H2 is falsified, H3 is supported, and the bottleneck bound again names
+the edge service of each decomposed configuration and, on browse, the monolith's database.
 
 The magnitudes differ, in two directions. The latency penalty at low load is larger in the cloud. The monolith
 was faster there, with a browse p99 of \xo{eks/p99/browse/A/50}\,ms at 50 requests per second against
 \xo{p99/browse/A/50}\,ms locally, because the Graviton nodes do not show the local host's wake-up penalty. Transit per hop was, if anything, lower than locally
 (\xo{eks/perhop/browse/net/min}--\xo{eks/perhop/browse/net/max} against
-\xo{perhop/browse/net/min}--\xo{perhop/browse/net/max}\,ms on browse), so the larger p99 ratios at the lowest rate,
-\xo{eks/h1/min}--\xo{eks/h1/max}, reflect the faster monolith. A sidecar pair cost about twice as much as locally,
+\xo{perhop/browse/net/min}--\xo{perhop/browse/net/max}\,ms on browse). The larger p99 ratios at the lowest rate,
+\xo{eks/h1/min}--\xo{eks/h1/max}, came instead from the faster monolith and from database time, which in the cloud
+rose with decomposition (browse: \xo{eks/layer/browse/A/50/db}\,ms in~A against \xo{eks/layer/browse/B/50/db} and
+\xo{eks/layer/browse/C/50/db}\,ms in B and~C), so that transit made up only about half of the mean latency B and~C
+added. A sidecar pair cost about twice as much as locally,
 \xo{eks/H3/per_hop_shallow_ms}--\xo{eks/H3/per_hop_deep_ms}\,ms per hop, and the mesh accounted for
 \xo{eks/H3/share_deep}\% of end-to-end latency on the six-hop path.
 

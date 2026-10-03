@@ -33,9 +33,9 @@ microservice version slower for every operation they tested~\cite{Faustino2024}.
 
 Read together, these studies disagree less than their conclusions suggest. Where both styles run on the same
 hardware, the monolith is faster or equal: in Ueda et al.'s, Al-Debagy and Martinek's and Jatkiewicz and
-Okr\'oj's experiments, and in Blinowski et al.'s single-machine runs. The microservice version comes out ahead
-only when it receives more instances or other resources, as in Berry et al.'s replicated deployments and
-Blinowski et al.'s cloud setup. A comparison under an equal budget is therefore a baseline whose direction is
+Okr\'oj's experiments, and in Blinowski et al.'s single-machine runs. The microservice version draws level or comes out ahead when it receives more instances or other resources, as in
+Berry et al.'s replicated deployments and Blinowski et al.'s cloud setup; the exception, Berry et al.'s faster
+unreplicated version, they attribute to the gateway buffering requests. A comparison under an equal budget is therefore a baseline whose direction is
 expected. What it can add is the size of the gap, where the gap comes from, and whether a different allocation
 or elastic capacity closes it.
 
@@ -194,9 +194,9 @@ high load and during recovery from an overload, not along a load sweep~\cite{Gan
 twelve report a tail percentile (p90 and p95), although Section~\ref{sec:bg-costs} identifies the tail as the
 quantity distribution affects most.
 Third, none decomposes per-request latency into layers (application, database, serialisation, network,
-framework) across configurations built from identical code; Ueda et al.\ break down CPU time per transaction, and
-Faustino et al.\ report the serialisation share of one operation,
-which is what is needed to say where the extra time of a distributed configuration goes. Fleet-scale studies
+framework) across configurations built from identical code, which is what is needed to say where the extra time
+of a distributed configuration goes; Ueda et al.\ break down CPU time per transaction, and Faustino et al.\ report
+the serialisation share of one operation. Fleet-scale studies
 count serialisation and RPC processing among the costs every request pays~\cite{Kanev2015,Seemakhupt2023}, but
 they compare services with each other, not one application in different topologies. Fourth, only Ueda et al.\ hold the resources of the two styles equal throughout, and Blinowski et al.\ and
 Jatkiewicz and Okr\'oj only in their local runs; the others give the microservice version different instances, more replicas or more hardware, or do not
