@@ -226,13 +226,13 @@ the pods' restart counts. A step during which any pod restarted, or during which
 comparing wall-clock time with an uptime clock that stops during sleep), is recorded as an incident and excluded from
 the analysis. After a saturated step, and before each closed-loop sweep, the runner waits until a 3\,s probe at 20
 requests per second completes without errors and with a p99 below 500\,ms. The backlog of an overloaded step
-therefore cannot leak into the next measurement. The local campaign ran \xo{cells} cells (\xo{reps} repetitions) in
-\xo{hours}\,h and the cloud campaign \xo{eks/cells} cells in \xo{eks/hours}\,h. The cloud runner also survives a
-loss of its connection to the cluster: it then discards the unfinished cell and repeats it once the API server is
-reachable again. A first cloud campaign was discarded: its analysis found step files cut short on their way
-from the load generator, because long exec streams to the remote cluster ended early without an error. The runner
-now checks the size and integrity of every transfer and resumes an incomplete one. All cloud results come from the
-repeated campaign.
+therefore cannot leak into the next measurement. The local campaign ran \xo{cells} cells (\xo{reps} repetitions) in \xo{hours}\,h and the cloud campaign
+\xo{eks/cells} cells in \xo{eks/hours}\,h. In the cloud the runner itself ran inside the cluster, so the network
+between the authors' laptop and the cluster played no part in the measurements. Two earlier cloud attempts, driven
+from the laptop, were discarded. In the first, result files were cut short in transfer, because long
+\texttt{kubectl exec} streams to the remote cluster ended early without an error; the runner now checks the size
+and integrity of every transfer. The second was stopped when its cluster was removed after the laptop's connection
+failed repeatedly. All cloud results come from the third campaign.
 
 \subsection{Resource treatments}
 \label{sec:treatments}
@@ -328,7 +328,8 @@ The three hypotheses of the protocol are kept, with falsification conditions tie
 conditions were made operational while the testbed was built, before the local campaign. Three analysis rules
 were fixed only after its data had been seen, and we flag them as such. These are the restriction of the H3
 comparison to rates without CFS throttling, its evaluation at each workload's lowest rate, and the p99 criterion
-for sustained levels. The autoscaling condition below was fixed before the autoscaling measurements.
+for sustained levels. The autoscaling condition below was fixed before the autoscaling measurements, apart from one margin
+reported with its results.
 
 \textbf{H1 (low-load overhead).} At the lowest offered rate of each workload, the monolith has a lower p99
 than every microservice configuration. H1 is falsified if the Bonferroni-adjusted interval of any ratio
@@ -338,12 +339,9 @@ $\mathrm{p99}_X/\mathrm{p99}_A$ lies entirely below one; it is supported if all 
 monolith's throughput within the tested concurrency range, and its coherency coefficient is lower. H2 is
 falsified if the monolith's throughput matches or exceeds every microservice configuration at every measured
 concurrency level, or if no microservice configuration has $\beta < \beta_A$. The same condition is tested
-separately under demand-proportional allocation. Under autoscaling the measurements are open-loop ramps, so the
-condition is stated on sustained levels, and it is fixed before the autoscaling measurements. H2 is supported
-under autoscaling if a decomposed configuration either sustains, in every repetition, a higher rate than the
+separately under demand-proportional allocation. Under autoscaling, where the measurements are open-loop ramps, H2 is supported if a decomposed configuration either sustains, in every repetition, a higher rate than the
 monolith's highest sustained rate, or sustains a rate that the monolith also sustains while requesting less CPU
-than the monolith in every repetition. Otherwise it is falsified. Section~\ref{sec:res-hpa} reports the one margin
-that had to be added to this rule after the measurements.
+than the monolith in every repetition. Otherwise it is falsified.
 
 \textbf{H3 (mesh cost and path length).} Istio's overhead grows with the number of remote calls on a request's path and exceeds a quarter of end-to-end
 latency on the six-hop path. With C and D differing only in the mesh, the overhead at a given offered rate is

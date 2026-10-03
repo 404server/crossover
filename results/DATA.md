@@ -14,8 +14,10 @@ with `analysis/analyze.py` (see the repository README).
 | `raw-kind-prop.tar` | local kind cluster, demand-proportional CPU allocation, configs A–D, 5 repetitions |
 | `raw-eks.tar` | Amazon EKS (Graviton c7g), equal CPU budget, configs A–D, 5 repetitions |
 | `raw-eks-hpa.tar` | Amazon EKS, Horizontal Pod Autoscaler under a shared CPU quota, configs A–C, 3 repetitions |
+| `raw-kind-work.tar` | local kind cluster, 1 ms of CPU in every module operation, equal CPU split, configs A–C, 3 repetitions |
+| `raw-kind-work-prop.tar` | as `raw-kind-work`, demand-proportional CPU allocation |
 | `raw-calib.tar` | calibration campaign with earlier settings, mentioned in the article; no reported number comes from it |
-| `logs.tar.gz` | console logs of every campaign |
+| `logs.tar.gz` | console logs of every campaign, including the in-cluster controller's log of the cloud runs (`cloud-run.log`) |
 | `code.tar.gz` | the repository at the commit that produced and analysed the data |
 | `SHA256SUMS` | checksums of all files above |
 

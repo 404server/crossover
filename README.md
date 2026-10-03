@@ -93,10 +93,23 @@ makes thousands of them. The runner therefore uses a service-account token: crea
 service account bound to `cluster-admin`, a `kubernetes.io/service-account-token` Secret for it, and a kubeconfig
 `~/.kube/eks-crossover-sa` with that token and the cluster's endpoint and CA.
 
+The published cloud results were produced by a controller that runs inside the cluster, so the operator's
+network plays no part in the measurements. It runs the equal-budget campaign, then the autoscaling treatment on
+three 8-vCPU nodes, then scales the system-under-test nodes to zero and keeps the results on the load generator's
+node until they are downloaded:
+
 ```bash
-nohup run/eks-run.sh >> results/eks.log 2>&1 &              # campaign.py --env eks --reps 5 (resumable)
-nohup run/eks-after.sh $! >> results/eks-hpa.log 2>&1 &     # then: optional autoscaling run, delete the cluster
+docker buildx build --platform linux/arm64 -t $reg/crossover-runner:1.0 -f run/runner.Dockerfile run --push
+# the load generator's node role needs eks:UpdateNodegroupConfig and eks:DescribeNodegroup on nodegroup/crossover/*
+sed "s|\${REG}|$reg|g" run/cloud-runner.yaml | kubectl apply -f -
+kubectl -n runner logs -f job/programme                      # progress
+KUBECONFIG=~/.kube/eks-crossover python3 run/pull-results.py eks       # resumable, verified download
+KUBECONFIG=~/.kube/eks-crossover python3 run/pull-results.py eks-hpa
+eksctl delete cluster -f run/eks.yaml --wait
 ```
+
+`run/eks-run.sh` and `run/eks-after.sh` drive the same campaigns from a laptop instead; over a long, unreliable
+link that proved fragile (see the paper's procedure section).
 
 `eks-after.sh` deletes the cluster when the campaign ends, retrying until AWS confirms it is gone. A cost guard
 that does not depend on the laptop is a CronJob in the cluster that scales every node group to zero at a fixed
