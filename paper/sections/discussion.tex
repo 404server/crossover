@@ -93,14 +93,19 @@ of JSON over HTTP/1.1, a sidecar-less mesh, and a workload that mixes operations
 \section{Conclusion}
 \label{sec:conclusion}
 
-We compared a monolith with three decompositions of identical code under an equal CPU budget, measured with
-open-loop and closed-loop load, a per-layer latency accounting that needs no synchronised clocks, and cgroup
-counters of every container. Decomposition added latency at low load: the p99 of the decomposed configurations was
-\xo{h1/min}--\xo{h1/max} times the monolith's. It reduced capacity to
-\xo{peakpct/min}--\xo{peakpct/max}\% of the monolith's, because the budget was divided among services that did not need it
-equally and the edge service hit its CPU quota first. A sidecar mesh added
-\xo{mesh/browse/200/perhop}--\xo{mesh/checkout/25/perhop}\,ms per hop and more CPU per request than the application.
-Allocating the budget in proportion to measured demand raised the decomposed configurations' capacity relative to
-the monolith by a factor of \xo{alloc/gainmin}--\xo{alloc/gainmax} but did not close the gap. Under these conditions there is no load at which decomposition pays off, however a fixed budget is divided. Its
-performance case requires resources or elasticity beyond a fixed budget. The testbed, data and analysis are published so that the same measurements can be
-repeated on other infrastructure and with other allocation policies.
+We compared a monolith with three decompositions of identical code, on a local cluster and on Amazon EKS, under an
+equal CPU budget and a demand-proportional allocation and at two levels of service demand.
+% TODO(results): autoscaling.
+Decomposition added latency at low load: the p99 of the decomposed configurations was \xo{h1/min}--\xo{h1/max}
+times the monolith's locally and \xo{eks/h1/min}--\xo{eks/h1/max} times in the cloud, mostly inter-service transit.
+It cut capacity to \xo{peakpct/min}--\xo{peakpct/max}\% (local) and \xo{eks/peakpct/min}--\xo{eks/peakpct/max}\%
+(cloud) of the monolith's, because the edge service exhausted its CPU share while the rest of the budget stayed
+idle. Allocating the budget by demand raised this to at most \xo{prop/peakpct/max}\%, and with 1\,ms of CPU in every
+module operation to at most \xo{workprop/peakpct/max}\%. A sidecar mesh added
+\xo{mesh/perhop/min}--\xo{eks/mesh/perhop/max}\,ms per call and more CPU than the application. No decomposed
+configuration overtook the monolith in any setting.
+
+For a team deciding how finely to split, these measurements put a price on each synchronous call and show where it
+is paid. They do not show a load at which decomposition pays for itself in performance; its case rests on the other
+benefits it brings, and the price is smallest when services are coarse and do substantial work. The testbed, data
+and analysis are published so that the same measurements can be repeated on other infrastructure.

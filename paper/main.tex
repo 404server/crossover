@@ -76,16 +76,16 @@ Kubernetes; CPU throttling\par}
 
 \paragraph{Practitioner points.}
 \begin{itemize}
-\item Under an equal CPU budget, splitting this application into services lowered peak throughput to
-\xo{peakpct/max}\% or less of the monolith's. Allocating the CPU in proportion to each service's demand raised it to
-at most \xo{prop/peakpct/max}\%
-of the monolith's, and decomposition did not pay off at any load.
-\item On one host, each synchronous call between services cost \xo{perhop/browse/net/min}--\xo{perhop/browse/net/max}\,ms
-of transit at low load (\xo{perhop/browse/nethigh/min}--\xo{perhop/browse/nethigh/max}\,ms at moderate load) and a few
-tenths of a millisecond of CPU,
-and a sidecar mesh roughly doubled the transit cost; measure this per-hop price before deciding how finely to split.
+\item Under an equal CPU budget, splitting this application into services cut its peak throughput to
+\xo{peakpct/min}--\xo{peakpct/max}\% (one host) and \xo{eks/peakpct/min}--\xo{eks/peakpct/max}\% (cloud) of the
+monolith's. Sizing each service to its demand, and heavier business logic, narrowed the gap, but no decomposition
+overtook the monolith.
+\item Each synchronous call cost a few tenths of a millisecond of transit and of CPU, and a sidecar mesh added
+\xo{mesh/perhop/min}--\xo{eks/mesh/perhop/max}\,ms more per call. A \texttt{Server-Timing} header is enough to
+measure this price before deciding how finely to split.
 \item In decomposed deployments the edge service's CPU quota set the capacity, and CFS throttling made tail latency
-erratic before average utilisation reached the limit; watch the edge service's throttled-period counter.
+erratic before average utilisation reached the limit. Size the edge service rather than the number of services,
+and watch its throttled-period counter.
 \end{itemize}
 
 \input{sections/intro}

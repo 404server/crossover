@@ -719,6 +719,9 @@ def paper_outputs(s, gen_dir):
             if r["net_per_hop"]:
                 nums[f"mesh/{wl}/{r['rate']}/perhop"] = fmt(r["net_per_hop"]["est"])
             nums[f"mesh/{wl}/{r['rate']}/share"] = fmt(100 * r["share"], 2)
+    hops = [r["net_per_hop"]["est"] for rows in s["mesh"].values() for r in rows if r.get("net_per_hop")]
+    if hops:  # the sidecar pair's cost per hop over every clean rate of both workloads
+        nums.update({"mesh/perhop/min": fmt(min(hops)), "mesh/perhop/max": fmt(max(hops))})
     for wl, d in s.get("perhop", {}).items():
         for cfg, v in d.items():
             for k in ("net", "net_high", "ser", "p50", "cpu"):
