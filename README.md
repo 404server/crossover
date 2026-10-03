@@ -16,7 +16,7 @@ results/    <env>/summary.json (analysed); raw/<env>/rep<r>/<cfg>/… is the cam
 
 ## Data
 
-Raw Vegeta results of every cell (several GB) are archived on Zenodo: **[DOI to be added]** (CC BY 4.0);
+Raw Vegeta results of every cell (several GB) are archived on Zenodo: [10.5281/zenodo.23123473](https://doi.org/10.5281/zenodo.23123473) (CC BY 4.0);
 `results/DATA.md` describes the files and `run/archive.sh` builds the upload set.
 Unpack them into `results/raw/` and run `analysis/analyze.py --env <env>` to regenerate every summary,
 paper number and the dashboard data. Environments: `kind` (equal CPU split) and `kind-prop`

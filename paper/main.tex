@@ -1,6 +1,6 @@
 % Journal manuscript. The document class is swapped for the target journal's template at submission;
 % everything below \begin{document} is template-neutral.
-\documentclass[11pt]{article}
+\documentclass[12pt]{article}
 \usepackage[margin=2.5cm]{geometry}
 \setlength{\emergencystretch}{2em}
 \usepackage[T1]{fontenc}
@@ -101,19 +101,20 @@ and watch its throttled-period counter.
 
 \section*{Data availability}
 The testbed, the campaign runner, the raw Vegeta results of every cell, the analysis pipeline and the
-dashboard are available at \textbf{[repository URL and Zenodo DOI to be added before submission]}.
+dashboard are available at \url{https://github.com/404server/crossover} and archived on Zenodo at
+\url{https://doi.org/10.5281/zenodo.23123473}.
 Every number in Sections~\ref{sec:results} and~\ref{sec:discussion} is generated from the raw results by the
 scripts in \texttt{analysis/}. The exception is the low-load control run in Section~\ref{sec:threats}, which is
 documented with its commands and output in \texttt{notes/control-lowload.md}.
 
 \section*{Declarations}
-% TODO(author): fill in before submission.
-\paragraph{Funding.} \textbf{[No external funding / grant name and number.]}
+\paragraph{Funding.} This research received no specific grant from any funding agency in the public, commercial
+or not-for-profit sectors.
 \paragraph{Conflict of interest.} The authors declare no conflict of interest.
 \paragraph{Ethics approval.} Not applicable: the study involves no human participants or personal data.
 \paragraph{Author contributions.} S.~Saidazov: conceptualisation, methodology, software, investigation, formal
 analysis, writing (original draft). \textbf{[Supervisor]}: supervision, writing (review and editing).
-\paragraph{Acknowledgements.} \textbf{[Optional.]}
+
 % TODO(author): review this statement and make sure it describes your use of AI tools accurately (Wiley policy).
 \paragraph{Use of generative AI.} The authors used Claude (Anthropic) to assist with implementing the testbed,
 campaign and analysis scripts, auditing the references against Crossref, and drafting and editing the manuscript.
