@@ -117,6 +117,9 @@ def main():
                 sus = r["rate"]
             out["ramp"][cfg][wl] = series
             out["sustained"][cfg][wl] = sus
+            top = [r for r in series if r["sat"] == 0]  # highest level sustained in every repetition, gaps allowed
+            out.setdefault("top", {}).setdefault(cfg, {})[wl] = {"rate": top[-1]["rate"], "cpu": top[-1]["quota_used_m"] / 1000,
+                                                                "replicas": top[-1]["replicas"]} if top else None
 
     # H2 under elasticity: does any decomposed configuration sustain a higher rate than the monolith?
     wins = []
@@ -128,8 +131,11 @@ def main():
             x_sus = out["sustained"].get(cfg, {}).get(wl)
             if a_sus is not None and x_sus is not None and x_sus > a_sus:
                 wins.append({"workload": wl, "config": cfg, "sustained": x_sus, "sustained_A": a_sus})
-    # efficiency: at a rate both sustained in every repetition, did X request less CPU than A in every repetition?
-    cheaper = []
+    # efficiency: at a rate both sustained in every repetition, did X request less CPU than A in every repetition, by
+    # more than 1% of the ceiling? Without the margin, the integer rounding of the static shares (a few millicores
+    # below the monolith's round 7.5 cores) counts as "less", although no autoscaler acted.
+    margin = 0.01 * ((meta or {}).get("args", {}).get("cpu_cap") or 0)
+    cheaper, unrounded = [], []
     for wl in WORKLOADS:
         by_rate = lambda c: {r["rate"]: r for r in out["ramp"].get(c, {}).get(wl, []) if r["sat"] == 0}
         a_rows = by_rate("A")
@@ -140,11 +146,13 @@ def main():
                 ra = a_rows.get(rate)
                 xs, as_ = [q for q in r["quota_used_all"] if q], [q for q in (ra or {}).get("quota_used_all", []) if q]
                 if ra and xs and as_ and max(xs) < min(as_):
-                    cheaper.append({"workload": wl, "config": cfg, "rate": rate, "cpu": max(xs) / 1000, "cpu_A": min(as_) / 1000})
+                    row = {"workload": wl, "config": cfg, "rate": rate, "cpu": max(xs) / 1000, "cpu_A": min(as_) / 1000}
+                    (cheaper if max(xs) < min(as_) - margin else unrounded).append(row)
     out["h2_elastic"] = {"verdict": "supported" if wins or cheaper else "falsified", "wins": wins, "cheaper": cheaper,
+                         "below_by_rounding_only": unrounded, "margin_m": margin,
                          "rule": "supported if, under the same CPU quota, a decomposed configuration sustains a higher offered "
                                  "rate than the monolith, or sustains a rate the monolith also sustains while requesting less CPU "
-                                 "in every repetition"}
+                                 "in every repetition, by more than 1% of the ceiling"}
     out = clean(out)
     (ROOT / "results" / a.env).mkdir(parents=True, exist_ok=True)
     (ROOT / "results" / a.env / "hpa.json").write_text(json.dumps(out))
@@ -152,12 +160,17 @@ def main():
     gen = ROOT / "paper" / "generated" / a.env
     gen.mkdir(parents=True, exist_ok=True)
     nums = {"hpa/verdict": out["h2_elastic"]["verdict"], "hpa/window": a.window, "hpa/slo": fmt(slo),
-            "hpa/cheaper": len(out["h2_elastic"]["cheaper"]),
-            "hpa/step": out["args"].get("ramp_step", "--"), "hpa/cap": fmt((out["args"].get("cpu_cap") or 0) / 1000, 2),
+            "hpa/cheaper": len(out["h2_elastic"]["cheaper"]), "hpa/rounding": len(out["h2_elastic"]["below_by_rounding_only"]),
+            "hpa/cells": sum(1 for c in raw.glob("rep*/*") if (c / "done").exists()),
+            "hpa/step": out["args"].get("ramp_step", "--"), "hpa/cap": fmt((out["args"].get("cpu_cap") or 0) / 1000, 3),
             "hpa/reps": max((r["reps"] for c in out["ramp"].values() for s in c.values() for r in s), default=0)}
     for cfg in out["configs"]:
         for wl in WORKLOADS:
             nums[f"hpa/sustained/{wl}/{cfg}"] = out["sustained"].get(cfg, {}).get(wl) or "--"
+            t = out.get("top", {}).get(cfg, {}).get(wl)
+            if t:
+                nums.update({f"hpa/top/{wl}/{cfg}": t["rate"], f"hpa/topcpu/{wl}/{cfg}": fmt(t["cpu"], 3),
+                             f"hpa/topreplicas/{wl}/{cfg}": fmt(t["replicas"])})
             series = out["ramp"].get(cfg, {}).get(wl, [])
             for r in series:
                 key = f"{wl}/{cfg}/{r['rate']}"

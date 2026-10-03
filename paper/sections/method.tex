@@ -241,21 +241,17 @@ The equal static split of Section~\ref{sec:budget} is the main treatment, and ev
 unless stated otherwise. Two further treatments change how the CPU is allocated, and each gives every configuration the same total. A
 third changes how much work each request carries.
 
-\paragraph{Demand-proportional allocation.} Each pod of a decomposed configuration receives a floor (0.15
-cores for application pods, 0.1 for database pods) plus a share of the rest of its tier's budget. That share
-equals the pod's share of its tier's measured CPU use in the equal-budget campaign. The shares are medians across
-repetitions, taken at the highest offered rate that every configuration sustained there (600 requests per second
-for browse, 400 for checkout). They are computed per workload, and each workload runs on its own deployment with
-its own allocation. This is a demand-proportional heuristic tuned to each workload, not a proven optimum. The
-shares were measured at a rate where the edge service was already slightly throttled, and the floors keep some
-cores on services the workload barely uses. It moves most of the budget to the edge. Under browse, the
-\texttt{catalog} service of~B gets \xo{alloc/cores/browse/B} cores instead of \xo{alloc/equal/B} and the
-\texttt{search} service of~C gets \xo{alloc/cores/browse/C} instead of \xo{alloc/equal/C}. Under checkout,
-\texttt{order} in~B gets \xo{alloc/cores/checkout/B} cores and \texttt{orders} in~C gets
-\xo{alloc/cores/checkout/C}. The
-monolith has one pod per tier, so its allocation cannot change. It is nevertheless re-measured in the same
-campaign, so that every comparison is with a monolith measured alongside it. This treatment ran in the local
-environment with \xo{prop/reps} repetitions of all four configurations.
+\paragraph{Demand-proportional allocation.} Each pod of a decomposed configuration receives a floor (0.15 cores
+for application pods, 0.1 for database pods) plus the rest of its tier's budget in proportion to its measured CPU
+use in the equal-budget campaign. The proportions are medians across repetitions at the highest rate every
+configuration sustained there, computed per workload, and each workload runs on its own deployment. This is a
+heuristic, not a proven optimum: the shares were measured where the edge service was already slightly throttled,
+and the floors keep some cores on services the workload barely uses. It moves most of the budget to the edge. Under
+browse, \texttt{catalog} in~B gets \xo{alloc/cores/browse/B} cores instead of \xo{alloc/equal/B} and \texttt{search}
+in~C \xo{alloc/cores/browse/C} instead of \xo{alloc/equal/C}; under checkout, \texttt{order} in~B gets
+\xo{alloc/cores/checkout/B} and \texttt{orders} in~C \xo{alloc/cores/checkout/C}. The monolith's allocation cannot
+change, but it is re-measured in the same campaign. The treatment ran in the local environment with
+\xo{prop/reps} repetitions of all four configurations.
 
 \paragraph{Service demand.} The business logic of the testbed takes microseconds, so the fixed cost of a remote call
 is large relative to the work it carries. To see how the conclusions change when the work is larger, a switch in
@@ -268,35 +264,27 @@ equal-split run with this demand, in the same way as above.
 
 \paragraph{Autoscaling under a shared ceiling.} The scalability argument for microservices is usually made for
 elastic capacity, so the third treatment adds it. Every application deployment gets a Horizontal Pod Autoscaler
-(\texttt{autoscaling/v2}). It targets 70\% average CPU utilisation of the pods' requests, allows one to 24
-replicas, uses the default scaling behaviour and starts from the demand-proportional shares. A namespace
-\texttt{ResourceQuota} caps the CPU requested by all pods of a configuration at the same ceiling for every
-configuration: three times the application budget plus the database budget. Database pods are not scaled, so the
-monolith keeps its single shared database.
+(\texttt{autoscaling/v2}, 70\% target CPU utilisation, one to 24 replicas, default behaviour) and starts from the
+demand-proportional shares. A namespace \texttt{ResourceQuota} caps the CPU requested by all pods of a configuration
+at the same ceiling for every configuration, three times the application budget plus the database budget. Database
+pods are not scaled, so the monolith keeps its single shared database. Two parameters differ from the static
+treatments, both so that the monolith can use the ceiling. The application budget is 3.5 cores, so that a monolith
+replica fits twice on an 8-vCPU node next to its system pods. The database budget is 4 cores, because with 2 cores
+the monolith is database-bound at \xo{chot/browse/A/64/apputil}\% application utilisation, below the autoscaler's
+target. The ceiling is therefore $3 \times 3.5 + 4 = 14.5$ cores. The database tier still bounds every
+configuration, and the decomposed ones, which spend more database CPU per request, reach that bound earlier.
 
-Two parameters differ from the static treatments, and both are chosen so that the monolith can use the ceiling.
-First, the application budget is 3.5 cores. A monolith replica then fits twice on an 8-vCPU node, whereas a
-4-core replica does not fit next to the node's system pods. Second, the database budget is 4 cores. With 2 cores
-the monolith is database-bound at \xo{chot/browse/A/64/apputil}\% application utilisation in the local
-environment, below the autoscaler's target, so its
-autoscaler would never act. The ceiling is therefore $3 \times 3.5 + 4 = 14.5$ cores. The database tier still
-bounds every configuration, and a decomposed configuration, which spends more database CPU per request, reaches
-that bound earlier. Section~\ref{sec:res-hpa} states this bound alongside the measurements.
-
-Load is open loop and rises in levels without pause or reset: browse from 500 to 16{,}000 requests per second and
-checkout from 200 to 6{,}400, each level 1.4--1.5 times the previous one. The tops are at least 1.5 times the
-monolith's expected capacity. Replicas added at one level carry over to the next. Each level runs for 180\,s, of
-which only the last 60\,s are recorded, after the autoscaler has had time to react. A level is \emph{sustained} if,
-in that window, at most 5\% of requests fail, throughput reaches 90\% of the offered rate and p99 is at most
-100\,ms. The runner stops a ramp after two consecutive levels that are not sustained. Replica counts, the
-autoscalers' view and the requested CPU are sampled every 10\,s. The autoscalers are created only after the warm-up
-and are given 30\,s with the system idle, so every ramp starts from one replica per service and new replicas join
-cold.
-
-Configurations A, B and~C take part. D is left out because its sidecars' CPU requests would count against the quota
-and its difference from~C, the mesh, is what H3 measures. The treatment ran in the cloud environment, with the
-8-vCPU node group scaled to three nodes. With the 4-vCPU node, the system under test then had 28 vCPUs, so the
-quota, not the nodes, limited scaling. Each configuration ran \xo{hpa/reps} repetitions.
+Load is open loop and rises without pause or reset, browse from 500 to 16{,}000 requests per second and checkout
+from 200 to 6{,}400, each level 1.4--1.5 times the previous one and the tops at least 1.5 times the monolith's
+expected capacity. Each level runs for 180\,s, of which the last 60\,s are recorded, after the autoscaler has had
+time to react; replicas carry over to the next level. A level is \emph{sustained} if, in that window, at most 5\%
+of requests fail, throughput reaches 90\% of the rate and p99 is at most 100\,ms, and a ramp stops after two
+consecutive levels that are not. Replicas, the autoscalers' view and the requested CPU are sampled every 10\,s. The
+autoscalers are created after the warm-up and given 30\,s with the system idle, so every ramp starts from one
+replica per service and new replicas join cold. Configurations A, B and~C take part. D is left out because its
+sidecars' CPU requests would count against the quota and its difference from~C is what H3 measures. The treatment
+ran in the cloud environment with the 8-vCPU node group scaled to three nodes, 28 vCPUs for the system under test,
+so the quota, not the nodes, limited scaling. Each configuration ran \xo{hpa/reps} repetitions.
 
 \subsection{Statistical analysis}
 \label{sec:stats}
@@ -354,7 +342,8 @@ separately under demand-proportional allocation. Under autoscaling the measureme
 condition is stated on sustained levels, and it is fixed before the autoscaling measurements. H2 is supported
 under autoscaling if a decomposed configuration either sustains, in every repetition, a higher rate than the
 monolith's highest sustained rate, or sustains a rate that the monolith also sustains while requesting less CPU
-than the monolith in every repetition. Otherwise it is falsified.
+than the monolith in every repetition. Otherwise it is falsified. Section~\ref{sec:res-hpa} reports the one margin
+that had to be added to this rule after the measurements.
 
 \textbf{H3 (mesh cost and path length).} Istio's overhead grows with the number of remote calls on a request's path and exceeds a quarter of end-to-end
 latency on the six-hop path. With C and D differing only in the mesh, the overhead at a given offered rate is

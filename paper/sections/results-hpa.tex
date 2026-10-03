@@ -1,4 +1,3 @@
-% Autoscaling treatment; text follows the eks-hpa analysis (analysis/analyze_hpa.py --env eks-hpa).
 \subsection{Autoscaling under a shared ceiling (RQ2, H2)}
 \label{sec:res-hpa}
 
@@ -35,4 +34,24 @@ dashed line is the shared quota of \xo{hpa/cap} cores.}
 \label{fig:hpa}
 \end{figure}
 
-% TODO(results): text; sustained rates \xo{hpa/sustained/<wl>/<cfg>}, verdict \xo{hpa/verdict}.
+Figure~\ref{fig:hpa} shows the autoscaling treatment, \xo{hpa/cells} fresh deployments of A, B and~C. The monolith
+sustained every level up to \xo{hpa/sustained/browse/A} browse and \xo{hpa/sustained/checkout/A} checkout requests
+per second, and it did so with a single replica. At those rates its application container stayed below the
+autoscaler's 70\% target, so it requested only its starting \xo{hpa/topcpu/browse/A} cores, 3.5 for the application
+and 4 for the database. The decomposed configurations sustained every level only up to
+\xo{hpa/sustained/browse/B} (B) and \xo{hpa/sustained/browse/C} (C) browse requests per second and
+\xo{hpa/sustained/checkout/B} and \xo{hpa/sustained/checkout/C} checkout requests per second. Their autoscalers did
+act: beyond these rates they added replicas until the configurations requested the whole ceiling of
+\xo{hpa/cap} cores. The new replicas joined cold while the load kept rising, however, and p99 broke the
+\xo{hpa/slo}\,ms target in at least one repetition. B reached the monolith's highest sustained browse level,
+\xo{hpa/top/browse/B} requests per second, in every repetition only at the ceiling, with \xo{hpa/topcpu/browse/B}
+cores requested against the monolith's \xo{hpa/topcpu/browse/A}. At the first level every configuration scaled up
+briefly, because the metrics pipeline still reported the CPU of the warm-up that had just ended; the next level
+undid it, and the 30\,s idle period before the ramp was evidently too short to prevent it.
+
+\textbf{H2 is therefore falsified under autoscaling as well.} One detail of the rule in
+Section~\ref{sec:hypotheses} needed a margin. At low rates, where no autoscaler had acted, B and~C requested a few
+millicores less than the monolith because their static shares are rounded down. Read literally, the rule would
+count that as sustaining a rate with less CPU. We therefore required the difference to exceed 1\% of the ceiling.
+This margin was fixed after we saw the case, and with it no decomposed configuration sustained a rate the monolith
+sustained while requesting less CPU.

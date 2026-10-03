@@ -1,9 +1,10 @@
-In \the\numexpr\xo{cells}+\xo{prop/cells}+\xo{work/cells}+\xo{workprop/cells}+\xo{eks/cells}\relax{} fresh deployments the answers were the same in both environments. Decomposition raised
+In \the\numexpr\xo{cells}+\xo{prop/cells}+\xo{work/cells}+\xo{workprop/cells}+\xo{eks/cells}+\xo{hpa/cells}\relax{} fresh deployments the answers were the same in both environments. Decomposition raised
 low-load p99 latency, mostly through inter-service transit rather than serialisation (H1 supported). Under an equal
 budget no decomposed configuration overtook the monolith at any load (H2 falsified). Each was limited by the CPU
 quota of its edge service, whose throttling made tail latency erratic before its average utilisation reached the
 limit, while most of the budget stayed unused. Allocating the budget by demand and giving every operation more work
 narrowed the gap but did not close it.
-% TODO(results): autoscaling.
+Autoscaling under a shared CPU ceiling did not change this: the monolith sustained several times the load of the
+decomposed configurations on half the CPU they requested at the ceiling.
 The Istio mesh added a fixed cost per call, \xo{H3/share_deep}\% (local) and \xo{eks/H3/share_deep}\% (cloud) of
 latency on a six-hop path, and used more CPU than the application (H3 supported).

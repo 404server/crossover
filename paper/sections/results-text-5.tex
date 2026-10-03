@@ -2,16 +2,17 @@
 
 \begin{table}[t]
 \caption{Hypotheses, falsification conditions and outcomes: local environment under the equal split and under
-demand-proportional allocation, and the cloud environment under the equal split.}
+demand-proportional allocation, the cloud environment under the equal split, and the
+autoscaling treatment (H2 only).}
 \label{tab:verdicts}
 \centering\small
-\begin{tabular}{@{}lp{0.44\linewidth}lll@{}}
+\begin{tabular}{@{}lp{0.36\linewidth}llll@{}}
 \toprule
-& Falsified if & Local & Proportional & Cloud \\
+& Falsified if & Local & Proportional & Cloud & Autoscaled \\
 \midrule
-H1 & any microservice configuration has a significantly lower p99 than A at the lowest rate & \xo{verdict/H1} & \xo{prop/verdict/H1} & \xo{eks/verdict/H1} \\
-H2 & A matches or exceeds every microservice configuration at every concurrency level, or no $\beta < \beta_A$ & \xo{verdict/H2} & \xo{prop/verdict/H2} & \xo{eks/verdict/H2} \\
-H3 & mesh $<25\%$ of end-to-end latency at six hops, or per-hop cost shrinking with depth & \xo{verdict/H3} & \xo{prop/verdict/H3} & \xo{eks/verdict/H3} \\
+H1 & any microservice configuration has a significantly lower p99 than A at the lowest rate & \xo{verdict/H1} & \xo{prop/verdict/H1} & \xo{eks/verdict/H1} & -- \\
+H2 & A matches or exceeds every microservice configuration at every concurrency level, or no $\beta < \beta_A$ & \xo{verdict/H2} & \xo{prop/verdict/H2} & \xo{eks/verdict/H2} & \xo{hpa/verdict} \\
+H3 & mesh $<25\%$ of end-to-end latency at six hops, or per-hop cost shrinking with depth & \xo{verdict/H3} & \xo{prop/verdict/H3} & \xo{eks/verdict/H3} & -- \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -19,6 +20,8 @@ H3 & mesh $<25\%$ of end-to-end latency at six hops, or per-hop cost shrinking w
 Table~\ref{tab:verdicts} summarises the three tests. Decomposition costs latency at low load (H1) and the mesh's
 cost grows with the number of hops (H3), as predicted. The central hypothesis, that horizontal decomposition eventually
 overtakes the monolith (H2), is falsified for an equal CPU budget: the monolith's capacity was \xo{peakfactor/min} to
-\xo{peakfactor/max} times that of the decomposed configurations, and no crossover appeared at any load. Allocating the budget in proportion
-to demand raised their capacity relative to the monolith by a factor of \xo{alloc/gainmin}--\xo{alloc/gainmax}
-but did not close the gap.
+\xo{peakfactor/max} times that of the decomposed configurations, and no crossover appeared at any load. Allocating the budget in proportion to demand raised their capacity relative to the monolith by a factor of
+\xo{alloc/gainmin}--\xo{alloc/gainmax} but did not close the gap. The cloud environment gave the same verdicts,
+heavier business logic narrowed the gap to \xo{workprop/peakpct/min}--\xo{workprop/peakpct/max}\% of the monolith's
+capacity under proportional allocation, and with autoscalers the monolith sustained several times the decomposed
+configurations' load.
