@@ -179,7 +179,6 @@ containerd~2.2. Networking uses the Amazon VPC CNI, so pods have VPC addresses a
 the VPC network, and kube-proxy runs in iptables mode. The two nodes have twice the CPU of the budget, which
 leaves room for sidecars and system daemons. The default scheduler placed the pods, constrained only by the
 node labels, and every cell records the resulting placement.
-% TODO(verify after the EKS campaign): placement pattern below, checked on 12 of 20 cells so far.
 In Configs~A and~B it placed every application pod on the larger node and every database on the smaller one in
 every repetition, so all database calls crossed the network. In C and~D some calls stayed within a node.
 

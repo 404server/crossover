@@ -1,12 +1,9 @@
-% Cloud environment and autoscaling treatment. Not \input yet: the text is written once the EKS and
-% EKS-HPA campaigns are analysed (analysis/analyze.py --env eks, compare_env.py, analyze_hpa.py --env eks-hpa).
 \subsection{The cloud environment}
 \label{sec:res-cloud}
 
 \begin{table}[t]
 \caption{Local and cloud environment side by side, equal CPU budget. p99 at the lowest offered rate (browse 50,
-checkout 25 requests/s) and its ratio to the monolith (H1); USL peak throughput $X_{\max}$ and its ratio to the
-monolith (H2); inter-service transit per hop at low load. Medians across repetitions.}
+checkout 25 requests/s) and its ratio to the monolith (H1); measured peak throughput and its ratio to the monolith (H2); inter-service transit per hop at low load. Medians across repetitions.}
 \label{tab:env}
 \centering\scriptsize
 \setlength{\tabcolsep}{3pt}
@@ -14,49 +11,33 @@ monolith (H2); inter-service transit per hop at low load. Medians across repetit
 \toprule
 & & \multicolumn{5}{c}{Local (kind)} & \multicolumn{5}{c}{Cloud (EKS)} \\
 \cmidrule(lr){3-7}\cmidrule(l){8-12}
-Workload & Configuration & p99 & vs.\ A & $X_{\max}$ & vs.\ A & hop & p99 & vs.\ A & $X_{\max}$ & vs.\ A & hop \\
+Workload & Configuration & p99 & vs.\ A & Peak & vs.\ A & hop & p99 & vs.\ A & Peak & vs.\ A & hop \\
 \midrule
 \xoinput{generated/tab-env.tex}
 \bottomrule
 \end{tabular}
 \end{table}
 
-% TODO(results): text.
+The cloud campaign repeated the main comparison on Amazon EKS: \xo{eks/cells} fresh deployments over
+\xo{eks/hours}\,h, with every response again byte-identical to the monolith's (\xo{eks/equiv/match} of
+\xo{eks/equiv/total}). Table~\ref{tab:env} sets its results beside the local ones. The verdicts are the same:
+H1 is supported, H2 is falsified, H3 is supported, and the bottleneck bound names the same container in every
+configuration, the monolith's database and the edge service of each decomposed one.
 
-\subsection{Autoscaling under a shared ceiling (RQ2, H2)}
-\label{sec:res-hpa}
+The magnitudes differ, in two directions. The latency penalty at low load is larger in the cloud. The monolith
+was faster there, with a browse p99 of \xo{eks/p99/browse/A/50}\,ms at 50 requests per second against
+\xo{p99/browse/A/50}\,ms locally, because the Graviton nodes do not show the local host's wake-up penalty. Every
+remote call, by contrast, now crossed a real network, and the p99 ratios at the lowest rate were
+\xo{eks/h1/min}--\xo{eks/h1/max}. Transit per hop, \xo{eks/perhop/browse/net/min}--\xo{eks/perhop/browse/net/max}\,ms
+on browse, was close to the local value. A sidecar pair cost about twice as much as locally,
+\xo{eks/H3/per_hop_shallow_ms}--\xo{eks/H3/per_hop_deep_ms}\,ms per hop, and the mesh accounted for
+\xo{eks/H3/share_deep}\% of end-to-end latency on the six-hop path.
 
-\begin{figure}[t]
-\centering
-\begin{tikzpicture}
-\begin{groupplot}[group style={group size=2 by 2, horizontal sep=1.5cm, vertical sep=1.6cm}, xo, width=0.5\textwidth,
-    height=4.6cm, xmode=log, xlabel={Offered load (requests/s)}]
-\nextgroupplot[title={Browse}, ymode=log, xmin=350, xmax=11000, xtick={500,1000,2000,4000,8000}, xticklabels={500,1k,2k,4k,8k}, ylabel={p99 latency (ms)}, legend columns=3, legend style={at={(1.1,1.22)}, anchor=south}]
-\xocurve{xoA}{*}{generated/eks-hpa/hpa-browse.csv}{A}\addlegendentry{A (monolith)}
-\xocurve{xoB}{square*}{generated/eks-hpa/hpa-browse.csv}{B}\addlegendentry{B (4 services)}
-\xocurve{xoC}{triangle*}{generated/eks-hpa/hpa-browse.csv}{C}\addlegendentry{C (8 services)}
-\nextgroupplot[title={Checkout}, ymode=log, xmin=150, xmax=3200, xtick={200,400,800,1600}, xticklabels={200,400,800,1.6k}]
-\xocurve{xoA}{*}{generated/eks-hpa/hpa-checkout.csv}{A}
-\xocurve{xoB}{square*}{generated/eks-hpa/hpa-checkout.csv}{B}
-\xocurve{xoC}{triangle*}{generated/eks-hpa/hpa-checkout.csv}{C}
-\nextgroupplot[ymin=0, ymax=16, ylabel={CPU requested (cores)}, xmin=350, xmax=11000, xtick={500,1000,2000,4000,8000}, xticklabels={500,1k,2k,4k,8k}]
-\addplot[gray, dashed, forget plot] coordinates {(100,\xo{hpa/cap}) (20000,\xo{hpa/cap})};
-\foreach \c/\m in {A/*, B/square*, C/triangle*} {
-  \edef\tmp{\noexpand\addplot[xo\c, mark=\m, mark size=1.4pt] table[x=rate, y=\c cap] {generated/eks-hpa/hpa-browse.csv};}\tmp
-}
-\nextgroupplot[ymin=0, ymax=16, xmin=150, xmax=3200, xtick={200,400,800,1600}, xticklabels={200,400,800,1.6k}]
-\addplot[gray, dashed, forget plot] coordinates {(100,\xo{hpa/cap}) (20000,\xo{hpa/cap})};
-\foreach \c/\m in {A/*, B/square*, C/triangle*} {
-  \edef\tmp{\noexpand\addplot[xo\c, mark=\m, mark size=1.4pt] table[x=rate, y=\c cap] {generated/eks-hpa/hpa-checkout.csv};}\tmp
-}
-\end{groupplot}
-\end{tikzpicture}
-\caption{Autoscaling treatment in the cloud environment. Top: p99 latency in the recorded last \xo{hpa/window}\,s
-of each \xo{hpa/step}\,s level (median across \xo{hpa/reps} repetitions, bars spanning the repetitions); a line
-ends where a level was no longer sustained (more than 5\% errors, throughput below 90\% of the rate, or p99 above
-\xo{hpa/slo}\,ms). Bottom: CPU requested by all pods of the configuration at the end of each level; the
-dashed line is the shared quota of \xo{hpa/cap} cores.}
-\label{fig:hpa}
-\end{figure}
+The capacity gap, in turn, is smaller. The scheduler placed the monolith's database on a different node from its
+application in every repetition, so every query crossed the network, and the database saturated at
+\xo{eks/peak/browse/A} browse and \xo{eks/peak/checkout/A} checkout requests per second. The decomposed
+configurations reached \xo{eks/peakpct/min}--\xo{eks/peakpct/max}\% of these peaks, against
+\xo{peakpct/min}--\xo{peakpct/max}\% locally. The generator's dispatch lag stayed below
+\xo{eks/lagmax/checkout}\,ms at the 99th percentile, so the cloud's low-rate measurements are also free of the
+local generator's burstiness.
 
-% TODO(results): text; sustained rates \xo{hpa/sustained/<wl>/<cfg>}, verdict \xo{hpa/verdict}.

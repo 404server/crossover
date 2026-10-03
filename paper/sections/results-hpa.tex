@@ -1,0 +1,38 @@
+% Autoscaling treatment; text follows the eks-hpa analysis (analysis/analyze_hpa.py --env eks-hpa).
+\subsection{Autoscaling under a shared ceiling (RQ2, H2)}
+\label{sec:res-hpa}
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}
+\begin{groupplot}[group style={group size=2 by 2, horizontal sep=1.5cm, vertical sep=1.6cm}, xo, width=0.5\textwidth,
+    height=4.6cm, xmode=log, xlabel={Offered load (requests/s)}]
+\nextgroupplot[title={Browse}, ymode=log, xmin=350, xmax=11000, xtick={500,1000,2000,4000,8000}, xticklabels={500,1k,2k,4k,8k}, ylabel={p99 latency (ms)}, legend columns=3, legend style={at={(1.1,1.22)}, anchor=south}]
+\xocurve{xoA}{*}{generated/eks-hpa/hpa-browse.csv}{A}\addlegendentry{A (monolith)}
+\xocurve{xoB}{square*}{generated/eks-hpa/hpa-browse.csv}{B}\addlegendentry{B (4 services)}
+\xocurve{xoC}{triangle*}{generated/eks-hpa/hpa-browse.csv}{C}\addlegendentry{C (8 services)}
+\nextgroupplot[title={Checkout}, ymode=log, xmin=150, xmax=3200, xtick={200,400,800,1600}, xticklabels={200,400,800,1.6k}]
+\xocurve{xoA}{*}{generated/eks-hpa/hpa-checkout.csv}{A}
+\xocurve{xoB}{square*}{generated/eks-hpa/hpa-checkout.csv}{B}
+\xocurve{xoC}{triangle*}{generated/eks-hpa/hpa-checkout.csv}{C}
+\nextgroupplot[ymin=0, ymax=16, ylabel={CPU requested (cores)}, xmin=350, xmax=11000, xtick={500,1000,2000,4000,8000}, xticklabels={500,1k,2k,4k,8k}]
+\addplot[gray, dashed, forget plot] coordinates {(100,\xo{hpa/cap}) (20000,\xo{hpa/cap})};
+\foreach \c/\m in {A/*, B/square*, C/triangle*} {
+  \edef\tmp{\noexpand\addplot[xo\c, mark=\m, mark size=1.4pt] table[x=rate, y=\c cap] {generated/eks-hpa/hpa-browse.csv};}\tmp
+}
+\nextgroupplot[ymin=0, ymax=16, xmin=150, xmax=3200, xtick={200,400,800,1600}, xticklabels={200,400,800,1.6k}]
+\addplot[gray, dashed, forget plot] coordinates {(100,\xo{hpa/cap}) (20000,\xo{hpa/cap})};
+\foreach \c/\m in {A/*, B/square*, C/triangle*} {
+  \edef\tmp{\noexpand\addplot[xo\c, mark=\m, mark size=1.4pt] table[x=rate, y=\c cap] {generated/eks-hpa/hpa-checkout.csv};}\tmp
+}
+\end{groupplot}
+\end{tikzpicture}
+\caption{Autoscaling treatment in the cloud environment. Top: p99 latency in the recorded last \xo{hpa/window}\,s
+of each \xo{hpa/step}\,s level (median across \xo{hpa/reps} repetitions, bars spanning the repetitions); a line
+ends where a level was no longer sustained (more than 5\% errors, throughput below 90\% of the rate, or p99 above
+\xo{hpa/slo}\,ms). Bottom: CPU requested by all pods of the configuration at the end of each level; the
+dashed line is the shared quota of \xo{hpa/cap} cores.}
+\label{fig:hpa}
+\end{figure}
+
+% TODO(results): text; sustained rates \xo{hpa/sustained/<wl>/<cfg>}, verdict \xo{hpa/verdict}.
