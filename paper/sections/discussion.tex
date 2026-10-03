@@ -3,64 +3,49 @@
 
 \subsection{Why there was no crossover}
 
-The idea of a crossover rests on an asymmetry: a monolith can only be scaled as a whole, so at some load the
-ability to give more resources to just the overloaded part should win. Under an equal budget that asymmetry runs
-the other way. The budget is fixed, so decomposition cannot add resources; it can only divide them. Dividing them
-had three measured consequences. Every request did more work in total: \xo{perhop/browse/cpu/min}--\xo{perhop/browse/cpu/max}\,ms of CPU per remote call, which for checkout in~C raised the CPU per request from
-\xo{cpumsref/checkout/A/total} to \xo{cpumsref/checkout/C/total}\,ms. The work was spread unevenly: the edge service needed several times the CPU of the
-others, yet received the same share, while the databases and the modules a workload did not touch kept part of
-the budget idle. And the smallest shares were the first to suffer from CFS throttling, which made tail latency
-erratic at average utilisations of \xo{hot/browse/C/500/util}--\xo{hot/browse/B/2200/util}\%, well below the
-nominal limit. The monolith's single process, by
-contrast, could use the whole application budget for whichever module was busy, and its capacity was set by its
-database.
+The idea of a crossover rests on an asymmetry: a monolith can only be scaled as a whole, so at some load giving
+resources to just the overloaded part should win. Under a fixed budget the asymmetry runs the other way, because
+decomposition cannot add resources; it can only divide them. The treatments separate what dividing them cost.
 
-The proportional treatment separates the second consequence from the first. Each service got the share its
-measured demand called for. That removed the idle shares and raised the capacity of the decomposed
-configurations, relative to the monolith, by a factor of \xo{alloc/gainmin}--\xo{alloc/gainmax}, yet the gap
-remained (Table~\ref{tab:alloc}). What remained is the extra work. Browse at 600 requests per second cost C's
-application tier \xo{prop/cpums/browse/C/600/app}\,ms of CPU per request and the monolith's
-\xo{prop/cpums/browse/A/600/app}\,ms. Uneven allocation accounted for part of the capacity gap under the equal
-split. The per-request cost of distribution accounts for the rest, and no static division of the same budget can
-recover it.
+Part of the gap is fragmentation. Under the equal split the edge service exhausted its share while the rest of the
+budget stood idle: at 64 clients C used \xo{budgetuse/browse/C}\% of its six cores and the monolith
+\xo{budgetuse/browse/A}\%. The edge service's CFS throttling also made tail latency erratic at average utilisations
+of \xo{hot/browse/C/500/util}--\xo{hot/browse/B/2200/util}\%. Allocating the budget by demand removed most of this and
+raised the decomposed configurations' capacity relative to the monolith by a factor of
+\xo{alloc/gainmin}--\xo{alloc/gainmax}.
 
-None of this means that decomposition cannot win on performance. It means that its performance case depends on
-using resources the monolith cannot use: a larger total budget, or one reallocated as load shifts. Berry et
-al.\ found microservices ahead of a monolith without replication and the outcome dependent on the scaling
-strategy~\cite{Berry2024}, and Blinowski et al.\ found that scaling out beyond a certain number of instances degraded
-performance~\cite{Blinowski2022}. Our results add a way to put a number on the entry price. The extra CPU per
-request (Table~\ref{tab:cost}) is the capacity a decomposed deployment must recover through better allocation
-before it breaks even; on this testbed it is \xo{perhop/browse/cpu/min}--\xo{perhop/browse/cpu/max}\,ms of CPU per hop without a mesh and
-\xo{perhop/browse/D/cpu}--\xo{perhop/checkout/D/cpu}\,ms with one. The proportional treatment shows that better
-static allocation alone does not recover it here.
-% TODO(results): add what the autoscaling treatment shows about elastic capacity.
+The rest is the work that distribution adds to every request, \xo{perhop/browse/cpu/min}--\xo{perhop/browse/cpu/max}\,ms
+of CPU per remote call without a mesh. No division of a fixed budget recovers it, because even a perfect allocation
+is bounded by the ratio of the CPU each request needs. How much that matters depends on how much work a request
+carries. With microsecond business logic the added work exceeded the logic itself. With 1\,ms in every module
+operation it became a fraction of it, and the proportional allocation brought B to \xo{workprop/peakpct/max}\% of
+the monolith's capacity. The cloud environment shows the same structure with different weights. Its monolith was
+faster at low load, so the same few tenths of a millisecond per call weighed more in the latency ratio, while its
+database, reached across the network, saturated earlier and left a smaller capacity gap.
+
+None of this means that decomposition cannot win on performance. It means that its case depends on resources the
+monolith cannot use, such as a larger budget or one that follows the load. Berry et al.\ found the outcome to depend
+on the scaling strategy~\cite{Berry2024}, and Blinowski et al.\ found that scaling out beyond some number of
+instances degraded performance~\cite{Blinowski2022}.
+% TODO(results): what the autoscaling treatment shows about elastic capacity.
 
 \subsection{Implications for practitioners}
 
-\paragraph{Price each synchronous hop.} At low load a remote call cost \xo{perhop/browse/C/p50}--%
-\xo{perhop/checkout/B/p50}\,ms of median latency and about \xo{perhop/browse/net/min}--\xo{perhop/browse/net/max}\,ms of
-transit here, and most of it was not serialisation. These figures come from one environment and one stack, but
-the method that produced them is cheap: a \texttt{Server-Timing} header and a load generator that records it.
-A team can measure its own per-hop price before deciding how finely to cut.
+\paragraph{Price each synchronous call.} A remote call cost a few tenths of a millisecond of transit, more than its
+serialisation, and a few tenths of a millisecond of CPU. A sidecar mesh doubled the transit locally and tripled it
+in the cloud. The price can be measured cheaply, with a \texttt{Server-Timing} header and a load generator that
+records it, and it should be set against the work a call carries before deciding how finely to cut.
 
-\paragraph{Size the edge service, not the service count.} The capacity of every decomposed configuration was the
-capacity of its edge service's CPU share. A deployment that splits a budget evenly will hit that limit early, and
-CFS throttling will show up in the tail before it shows up in average utilisation. Monitoring the throttled-period
-counter of the edge service is a better early warning than its CPU utilisation. Sizing each service to its
-measured demand raised capacity relative to the monolith by \xo{alloc/gainmin}--\xo{alloc/gainmax} times without
-adding any CPU.
+\paragraph{Size the edge service, not the service count.} The capacity of every decomposed configuration was its
+edge service's CPU share. That service's throttled-period counter warns earlier than its utilisation, and sizing
+services to their measured demand raised capacity relative to the monolith \xo{alloc/gainmin}--\xo{alloc/gainmax}
+times without adding CPU.
 
-\paragraph{Account for the mesh's CPU.} On a sidecar mesh the proxies used more CPU per request than the
-application itself. Their latency cost, a few tenths of a millisecond per hop, was modest; their CPU cost was not.
-Sidecar-less data planes are reported to reduce the overhead substantially~\cite{BremlerBarr2025} and should be
-measured in the same way before they are adopted for performance reasons.
-
-\paragraph{Prefer coarse decomposition when decomposing for other reasons.} Organisational and deployment
-benefits are legitimate reasons to split a system~\cite{Su2024}. When they are the reason, our data favour the coarsest split that achieves them, and they put numbers on
-the known advice against services that are too small~\cite{Taibi2018}. Under the equal split B reached
-\xo{peakratio/browse/B}--\xo{peakratio/checkout/B} of the monolith's capacity and C and D about a tenth or less.
-With proportional allocation B reached \xo{prop/peakratio/checkout/B}--\xo{prop/peakratio/browse/B} and C and D
-about 0.3.
+\paragraph{Prefer coarse splits, and count the mesh's CPU.} When organisational reasons drive a split, the coarsest
+split that serves them costs least. B kept more capacity than C under every allocation and in both environments, up
+to three times as much, which puts numbers on the advice against services that are too small~\cite{Taibi2018}. On a
+sidecar mesh the proxies used more CPU than the application. Sidecar-less data planes are reported to cost much
+less~\cite{BremlerBarr2025} and should be measured in the same way.
 
 \subsection{Lessons for testbed builders}
 
