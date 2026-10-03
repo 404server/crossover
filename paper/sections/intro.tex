@@ -19,9 +19,7 @@ connection pools and share of the CPU. Reviews of the migration literature accor
 conflicting~\cite{Rodrigues2024} and note a lack of comparative studies~\cite{RodriguesJSS2025}.
 
 This article reports a controlled comparison designed around those problems. It implements and executes a
-measurement protocol we presented earlier\footnote{As a talk at the 4th Annual Graduate Student Research Workshop on Computer Science, Information Systems and
-Engineering, Kazakh-British Technical University, Almaty, 2026, without published proceedings.},
-and it revises that protocol where building it showed parts of it to be unsound. The testbed runs one e-commerce application in four topologies: a monolith (A), four
+measurement protocol we designed beforehand, and it revises that protocol where building it showed parts of it to be unsound. The testbed runs one e-commerce application in four topologies: a monolith (A), four
 coarse-grained services (B), eight fine-grained services (C), and the same eight services with an Istio service
 mesh (D). All four run the same binary with identical business code; only the mapping of modules to processes
 differs. Every configuration receives the same CPU budget. Each process reports, in a W3C \texttt{Server-Timing}
