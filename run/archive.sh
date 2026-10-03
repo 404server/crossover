@@ -8,7 +8,7 @@ out=${1:-zenodo}
 mkdir -p "$out"
 for d in results/raw/*/; do
   env=$(basename "$d")
-  case "$env" in *-smoke|*-truncated) continue;; esac
+  case "$env" in *-smoke|*-truncated|*-partial) continue;; esac
   [ -n "$(find "$d" -name done -print -quit)" ] || continue
   echo "packing $env"
   tar -cf "$out/raw-$env.tar" -C results/raw "$env"

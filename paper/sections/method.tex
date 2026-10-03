@@ -239,8 +239,8 @@ repeated campaign.
 \label{sec:treatments}
 
 The equal static split of Section~\ref{sec:budget} is the main treatment, and every result is reported for it
-unless stated otherwise. Two further treatments relax it. Each changes only how a fixed amount of CPU is
-distributed, and each gives every configuration the same total.
+unless stated otherwise. Two further treatments change how the CPU is allocated, and each gives every configuration the same total. A
+third changes how much work each request carries.
 
 \paragraph{Demand-proportional allocation.} Each pod of a decomposed configuration receives a floor (0.15
 cores for application pods, 0.1 for database pods) plus a share of the rest of its tier's budget. That share
@@ -257,6 +257,15 @@ cores on services the workload barely uses. It moves most of the budget to the e
 monolith has one pod per tier, so its allocation cannot change. It is nevertheless re-measured in the same
 campaign, so that every comparison is with a monolith measured alongside it. This treatment ran in the local
 environment with \xo{prop/reps} repetitions of all four configurations.
+
+\paragraph{Service demand.} The business logic of the testbed takes microseconds, so the fixed cost of a remote call
+is large relative to the work it carries. To see how the conclusions change when the work is larger, a switch in
+the artifact makes every module operation spin for 1\,ms of the calling thread's CPU time before it runs; time
+spent throttled or descheduled does not count. A browse request then carries about \xo{work/layer/browse/A/50/app}\,ms
+of application work and a checkout about \xo{work/layer/checkout/A/25/app}\,ms, wherever the modules run. This
+treatment ran in the local environment for Configurations A, B and~C with \xo{work/reps} repetitions, first under
+the equal split and then under a demand-proportional allocation. The proportional shares were derived from the
+equal-split run with this demand, in the same way as above.
 
 \paragraph{Autoscaling under a shared ceiling.} The scalability argument for microservices is usually made for
 elastic capacity, so the third treatment adds it. Every application deployment gets a Horizontal Pod Autoscaler

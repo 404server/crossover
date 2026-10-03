@@ -1,0 +1,39 @@
+\subsection{Capacity when the business logic is heavier (RQ2, H2)}
+\label{sec:res-work}
+
+\begin{table}[t]
+\caption{Service-demand treatment: every module operation spends 1\,ms of CPU (local environment, Configurations A--C,
+\xo{work/reps} repetitions). Columns as in Table~\ref{tab:alloc}: measured peak throughput (requests/s) under the
+equal split and under demand-proportional allocation, the same relative to the monolith, concurrency levels at
+which a configuration measured above the monolith, and the busiest container at 64 clients.}
+\label{tab:work}
+\centering\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}llrrrrlll@{}}
+\toprule
+& & \multicolumn{2}{c}{Peak} & \multicolumn{2}{c}{vs.\ A} & & \multicolumn{2}{c}{Busiest container at $N=64$} \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}\cmidrule(l){8-9}
+Workload & Configuration & equal & prop. & equal & prop. & Wins over A & equal & prop. \\
+\midrule
+\xoinput{generated/tab-work.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+With 1\,ms of CPU in every module operation the monolith is no longer bound by its database. At 64 clients its
+application container used \xo{work/chot/browse/A/64/apputil}\% of its four cores on both workloads, and it peaked
+at \xo{work/peak/browse/A} browse and \xo{work/peak/checkout/A} checkout requests per second (Table~\ref{tab:work}).
+The gap to the decomposed configurations narrowed. Under the equal split, B reached \xo{work/peakpct/browse/B}\% of
+the monolith's peak on browse and \xo{work/peakpct/checkout/B}\% on checkout, and C \xo{work/peakpct/browse/C}\% and
+\xo{work/peakpct/checkout/C}\%, against \xo{peakpct/browse/B}--\xo{peakpct/checkout/B}\% and
+\xo{peakpct/browse/C}--\xo{peakpct/checkout/C}\% without the added work. With proportional allocation B reached
+\xo{workprop/peakpct/browse/B}\% and \xo{workprop/peakpct/checkout/B}\%, and C \xo{workprop/peakpct/browse/C}\% and
+\xo{workprop/peakpct/checkout/C}\%. Still no decomposed configuration matched the monolith at any measured
+concurrency, so \textbf{H2 is falsified under this treatment as well}.
+
+What remains is the cost of distribution, which is now small relative to the work. At \xo{workprop/ref/browse/high}
+browse requests per second C's application tier needed \xo{workprop/cpumsref/browse/C/app}\,ms of CPU per request,
+\xo{workprop/cpumsref/browse/A/app}\,ms for the monolith. Even a perfect allocation of the same four cores could therefore serve C at most that fraction of the
+monolith's rate, and the measured peaks lie below this bound. The latency penalty
+at low load shrank in the same way: the p99 ratios to the monolith were \xo{work/h1/min}--\xo{work/h1/max} under the
+equal split, against \xo{h1/min}--\xo{h1/max} without the added work, and H1 remained supported.
