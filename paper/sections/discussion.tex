@@ -23,7 +23,7 @@ the monolith's capacity. The cloud environment shows the same structure with dif
 latency ratio, while the monolith, whose database calls all crossed the network, reached a lower peak, which left a
 smaller capacity gap.
 
-None of this means that decomposition cannot win on performance. It means that its case depends on resources the
+Decomposition can still win on performance, but only with resources the
 monolith cannot use, such as a larger budget or one that follows the load. Berry et al.\ found the outcome to depend
 on the scaling strategy~\cite{Berry2024}, and Blinowski et al.\ found that scaling out beyond some number of
 instances degraded performance~\cite{Blinowski2022}.
