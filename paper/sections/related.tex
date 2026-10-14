@@ -60,7 +60,9 @@ that raising the request rate from 40 to 400 requests per second added 41.2\,ms 
 time~\cite{Zhao2025}. Ghemawat et al.\ proposed writing an application as a logical monolith whose components are placed in one
 process or in several at deployment time. With their Service Weaver prototype they reported up to $15\times$ lower
 latency and $9\times$ lower cost than a microservice deployment of the same application~\cite{Ghemawat2023}. Our testbed uses the same mechanism (one binary, placement chosen per deployment)
-to hold the code constant across configurations. Medeiros R\^ego et al.\ deployed Online Boutique at several
+to hold the code constant across configurations. Colarusso et al.\ address the communication cost of fine-grained services at run
+time: they mine distributed traces for groups of services that call each other and deploy each group together, which
+lowered the response times of the most critical operations~\cite{Colarusso2024}. Medeiros R\^ego et al.\ deployed Online Boutique at several
 granularity levels with Service Weaver on Amazon EKS. On one node the monolith had the lowest p95 at every load,
 and distributed placements did better at high load only when they ran on two nodes, that is, with twice the
 hardware~\cite{MedeirosRego2025}. Jayasinghe et al.\ showed
@@ -68,7 +70,8 @@ that decomposition can raise or lower throughput and mean latency depending on t
 the service demand, the concurrency and the decomposition strategy~\cite{Jayasinghe2020}. Shadija
 et al.\ deployed the same ASP.NET microservices on one server and on two and reported differences below 1\% for a
 single workflow, while cautioning that nested dependencies could compound small delays~\cite{Shadija2017UCC}. Hassan et al.\ mapped the research on the granularity problem
-in microservice transitions~\cite{Hassan2020}, and Taibi and Lenarduzzi list services that are too small, which
+in microservice transitions~\cite{Hassan2020} and later proposed a systematic scalability analysis to inform
+decisions to merge or split services~\cite{Hassan2022}. Taibi and Lenarduzzi list services that are too small, which
 add communication without adding cohesion, among the bad smells of microservice architectures~\cite{Taibi2018}.
 At the scale of microseconds, which is the scale of our services' business logic, fixed per-call overheads
 dominate~\cite{Barroso2017,Sriraman2018}.
@@ -80,7 +83,8 @@ How resources are allocated to the services of one application is a research fie
 Horizontal Pod Autoscaler scales each deployment on a utilisation target~\cite{Nguyen2020}. ATOM sizes
 microservices with a layered queueing model~\cite{Gias2019}, FIRM and Sinan learn which service to scale to meet a
 tail-latency objective~\cite{Qiu2020,Zhang2021Sinan}, and Autopilot sets limits and replica counts for Google's
-production jobs from their usage~\cite{Rzadca2020}. Jeong et al.\ survey autoscaling techniques for cloud-native
+production jobs from their usage~\cite{Rzadca2020}. LSRAM computes a per-service allocation for a latency objective by gradient
+descent and reported 17\% lower resource use than earlier SLO-based frameworks~\cite{Hu2025LSRAM}. Jeong et al.\ survey autoscaling techniques for cloud-native
 systems~\cite{Jeong2025}. These systems allocate resources within a given decomposition. They do not ask whether
 the decomposition itself pays for its overhead, which is the question the allocation treatments of this study
 address. They also show why the treatments matter: an evenly divided budget is a poor allocation for most
@@ -92,7 +96,9 @@ microservice applications.
 Measurements of mesh overhead come mostly from studies of the mesh itself (Section~\ref{sec:bg-costs}). Zhu et
 al.'s MeshInsight predicts the overhead a mesh adds to a call graph and estimated a median critical-path overhead
 of about 0.2\,ms in TCP mode and 2\,ms in gRPC mode on Alibaba call graphs~\cite{Zhu2023}. Song et al.\ quantified
-per-pod sidecar overhead in production and proposed a centralised sidecar-free design~\cite{Song2024}, and Saleh
+per-pod sidecar overhead in production and proposed a centralised sidecar-free design~\cite{Song2024}. Salcedo-Navarro et al.\ measured how cold start and
+latency grow with the number of sidecar proxies chained in front of a service and found that up to five chained
+proxies stayed close to Envoy~\cite{SalcedoNavarro2025}. Saleh
 Sedghpour et al.\ showed that circuit-breaker and retry settings strongly affect a meshed application under
 overload~\cite{SalehSedghpour2022}. These studies
 compare meshes with each other or with no mesh on a fixed application. To our knowledge, none
@@ -106,7 +112,9 @@ Papadopoulos et al.\ proposed eight principles for reproducible performance eval
 found that few studies follow them~\cite{Papadopoulos2021}. Cloud measurements vary considerably with benchmark,
 instance type and tenancy~\cite{Laaber2019,Leitner2016}. Eismann et al.\ showed that establishing reliable performance
 baselines is difficult for microservice applications, using TeaStore as their
-subject~\cite{Eismann2020}. Kalibera and Jones showed that benchmark results vary at more than one
+subject~\cite{Eismann2020}. Aderaldo et al.\ generate controlled test scenarios from a declarative specification to
+measure how resiliency patterns such as Retry and Circuit Breaker affect performance under varying workloads and
+failure rates~\cite{Aderaldo2025}. Kalibera and Jones showed that benchmark results vary at more than one
 level of repetition, for example between iterations within a process and between processes, and gave a method to
 plan repetitions and report effect sizes with confidence intervals~\cite{Kalibera2013}. Our analysis follows this
 view and treats a fresh deployment as the unit of replication.
